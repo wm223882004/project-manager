@@ -386,7 +386,7 @@
             @click="console.log('item-row clicked:', item.id), selectItem(item)"
           >
             <div class="item-info">
-              <span class="item-title">{{ item.name || item[invoice_no] || item.title }}</span>
+              <span class="item-title">{{ item.name || item.invoice_no || item.receipt_no || item.title }}</span>
               <span class="item-sub">{{ getItemSub(item) }}</span>
             </div>
             <span v-if="item.status" :class="['item-status', item.status]">{{ item.status }}</span>
