@@ -415,24 +415,25 @@ const onClick = (event) => {
   if (showProjectMarkers.value && projectMarkers.length > 0) {
     raycaster.setFromCamera(mouse, camera)
 
-    const markerMeshes = []
+    // 获取所有可点击对象（mesh和sprite）
+    const clickables = []
     projectMarkers.forEach(group => {
       if (group.visible) {
         group.children.forEach(child => {
-          if (child.isMesh) {
-            markerMeshes.push(child)
+          if (child.isMesh || child.isSprite) {
+            clickables.push(child)
           }
         })
       }
     })
 
-    const intersects = raycaster.intersectObjects(markerMeshes)
+    const intersects = raycaster.intersectObjects(clickables)
 
     if (intersects.length > 0) {
-      const hitMesh = intersects[0].object
+      const hitObject = intersects[0].object
       let hitGroup = null
       projectMarkers.forEach(group => {
-        if (group.children.includes(hitMesh)) {
+        if (group.children.includes(hitObject)) {
           hitGroup = group
         }
       })
@@ -739,42 +740,64 @@ const createProjectMarkers = () => {
       // 创建标签（项目编号+名称）
       const labelCanvas = document.createElement('canvas')
       const ctx = labelCanvas.getContext('2d')
-      labelCanvas.width = 256
-      labelCanvas.height = 80
+      labelCanvas.width = 320
+      labelCanvas.height = 100
 
-      // 背景
-      ctx.fillStyle = 'rgba(10, 25, 50, 0.85)'
-      ctx.roundRect(0, 0, 256, 80, 8)
+      // 解析状态颜色为RGB
+      const r = (color >> 16) & 255
+      const g = (color >> 8) & 255
+      const b = color & 255
+
+      // 状态颜色半透明背景
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.9)`
+      ctx.beginPath()
+      ctx.roundRect(0, 0, 320, 100, 12)
       ctx.fill()
 
-      // 边框
-      ctx.strokeStyle = `rgba(${parseInt(color.toString(16).substr(0,2), 16)}, ${parseInt(color.toString(16).substr(2,2), 16)}, ${parseInt(color.toString(16).substr(4,2), 16)}, 0.8)`
+      // 深色遮罩
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+      ctx.beginPath()
+      ctx.roundRect(2, 2, 316, 96, 10)
+      ctx.fill()
+
+      // 内层状态颜色背景
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.85)`
+      ctx.beginPath()
+      ctx.roundRect(4, 4, 312, 92, 8)
+      ctx.fill()
+
+      // 白色边框
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
       ctx.lineWidth = 2
-      ctx.roundRect(0, 0, 256, 80, 8)
+      ctx.beginPath()
+      ctx.roundRect(4, 4, 312, 92, 8)
       ctx.stroke()
 
-      // 项目编号
+      // 项目编号（更大更醒目）
       ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 20px Arial'
+      ctx.font = 'bold 24px Arial'
       ctx.textAlign = 'center'
-      ctx.fillText(project.code, 128, 30)
+      ctx.textBaseline = 'middle'
+      ctx.fillText(project.code, 160, 35)
 
       // 项目名称
-      ctx.font = '14px Arial'
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
-      const displayName = project.name.length > 14 ? project.name.substring(0, 14) + '...' : project.name
-      ctx.fillText(displayName, 128, 55)
+      ctx.font = '16px Arial'
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+      const displayName = project.name.length > 16 ? project.name.substring(0, 16) + '...' : project.name
+      ctx.fillText(displayName, 160, 65)
 
       const labelTexture = new THREE.CanvasTexture(labelCanvas)
+      labelTexture.needsUpdate = true
       const labelMaterial = new THREE.SpriteMaterial({
         map: labelTexture,
         transparent: true,
         depthTest: false
       })
       const label = new THREE.Sprite(labelMaterial)
-      label.scale.set(0.06, 0.02, 1)
-      label.position.y = 0.035 // 在棱锥上方
+      label.scale.set(0.08, 0.025, 1)
+      label.position.y = 0.04
       label.visible = true
+      label.userData.isLabel = true
       markerGroup.add(label)
       markerGroup.userData.label = label
 
@@ -851,6 +874,25 @@ const animate = () => {
         const finalX = x + Math.sin(angleOffset) * 0.015
         const finalZ = z + Math.cos(angleOffset) * 0.015
         group.position.set(finalX, basePos.y, finalZ)
+      }
+    })
+  }
+
+  // 标签背面检测 - 转到背面时隐藏
+  if (showProjectMarkers.value && camera) {
+    projectMarkers.forEach((group) => {
+      const label = group.userData.label
+      if (label && group.visible) {
+        // 计算标签位置（世界坐标）
+        const labelWorldPos = new THREE.Vector3()
+        label.getWorldPosition(labelWorldPos)
+
+        // 计算从相机到标签的方向
+        const toCamera = camera.position.clone().normalize()
+
+        // 如果标签在相机背后（点积为负），隐藏标签
+        const dot = labelWorldPos.normalize().dot(toCamera)
+        label.visible = dot > 0
       }
     })
   }
