@@ -1,8 +1,17 @@
 <template>
   <div class="sidebar-wrapper" :class="{ expanded: activeModule && !panelCollapsed }">
+    <button
+      class="toggle-btn"
+      @click="toggleSidebar"
+      :title="panelCollapsed ? '展开' : '隐藏'"
+      :style="{ left: panelCollapsed ? '0px' : '52px' }"
+    >
+      <span class="toggle-arrow" :class="{ expanded: !panelCollapsed }">&#9654;</span>
+    </button>
+
     <div
       class="sidebar-tabs"
-      :class="{ collapsed: sidebarCollapsed }"
+      :class="{ collapsed: panelCollapsed }"
     >
       <button
         v-for="item in menuItems"
@@ -14,15 +23,6 @@
         <span class="tab-tooltip">{{ item.label }}</span>
       </button>
     </div>
-
-    <button
-      class="toggle-btn"
-      @click="toggleSidebar"
-      :title="sidebarCollapsed ? '展开' : '隐藏'"
-      :style="{ left: sidebarCollapsed ? '0px' : '52px' }"
-    >
-      <span class="toggle-arrow" :class="{ collapsed: sidebarCollapsed }">&#9664;</span>
-    </button>
 
     <!-- 项目详情面板 - 显示在右侧 -->
     <div
@@ -219,7 +219,7 @@
             v-for="item in filteredItems"
             :key="item.id"
             :class="['item-row', { selected: selectedItem && selectedItem.id === item.id }]"
-            @click.stop="selectItem(item)"
+            @click="console.log('item-row clicked:', item.id), selectItem(item)"
           >
             <div class="item-info">
               <span class="item-title">{{ item.name || item[invoice_no] || item.title }}</span>
@@ -642,13 +642,21 @@ const selectItem = (item) => {
   console.log('selectItem called with:', item)
   console.log('activeModule:', props.activeModule)
   selectedItem.value = item
+  console.log('selectedItem set to:', selectedItem.value)
   if (props.activeModule === 'projects') {
     console.log('Setting showDetailView to true')
     showDetailView.value = true
     activeSubTab.value = 'contracts'
+    // Load project related data
     loadProjectContracts(item.id)
     loadProjectInvoices(item.id)
+  } else {
+    // For other modules, also show detail view if item supports it
+    if (item.name) {
+      showDetailView.value = true
+    }
   }
+  console.log('showDetailView is now:', showDetailView.value)
 }
 
 const loadProjectContracts = async (projectId) => {
@@ -758,7 +766,11 @@ const loadModuleData = (key) => {
 }
 
 const toggleSidebar = () => {
-  sidebarCollapsed.value = !sidebarCollapsed.value
+  if (panelCollapsed.value) {
+    panelCollapsed.value = false
+  } else {
+    panelCollapsed.value = true
+  }
 }
 
 const closePanel = () => {
@@ -904,6 +916,7 @@ watch(() => props.viewProject, (project) => {
 
 watch([showDetailView, selectedItem], ([show, item]) => {
   console.log('Detail panel visibility:', { showDetailView: show, selectedItem: item })
+  console.log('detail-panel should render:', show && item !== null)
   updateSidebarOffset()
 })
 
@@ -936,7 +949,7 @@ onMounted(() => {
   width: 52px;
   flex-shrink: 0;
   transition: width 0.25s ease;
-  position: fixed;
+  position: relative;
   left: 0;
   top: 0;
   overflow: visible;
@@ -1034,7 +1047,7 @@ onMounted(() => {
 
 .toggle-btn {
   position: fixed;
-  left: 52px;
+  left: 0;
   top: 50%;
   transform: translateY(-50%);
   width: 18px;
@@ -1046,7 +1059,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: left 0.25s ease, background 0.2s;
   z-index: 200;
 }
 
@@ -1060,8 +1073,12 @@ onMounted(() => {
   transition: transform 0.25s ease;
 }
 
-.toggle-arrow.collapsed {
+.toggle-arrow.expanded {
   transform: rotate(180deg);
+}
+
+.toggle-arrow:not(.expanded) {
+  transform: rotate(0deg);
 }
 
 .sidebar-panel {

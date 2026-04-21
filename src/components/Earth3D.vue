@@ -314,36 +314,29 @@ const createStarfield = () => {
 }
 
 const createEarth = () => {
-  // Load texture using fetch + blob URL for Electron compatibility
-  fetch('/earth.jpg')
-    .then(res => res.blob())
-    .then(blob => {
-      const url = URL.createObjectURL(blob)
-      const loader = new THREE.TextureLoader()
-      loader.load(
-        url,
-        (texture) => {
-          texture.colorSpace = THREE.SRGBColorSpace
-          const earthGeometry = new THREE.SphereGeometry(1, 64, 64)
-          const earthMaterial = new THREE.MeshPhongMaterial({
-            map: texture,
-            specular: new THREE.Color(0x333333),
-            shininess: 15
-          })
-          earth = new THREE.Mesh(earthGeometry, earthMaterial)
-          scene.add(earth)
-        },
-        undefined,
-        (error) => {
-          console.error('Failed to load earth texture:', error)
-          createFallbackEarth()
-        }
-      )
-    })
-    .catch(err => {
-      console.error('Failed to fetch earth texture:', err)
+  // Load texture using THREE.TextureLoader with correct path
+  const loader = new THREE.TextureLoader()
+  // Use direct path - works in both dev and production
+  const texturePath = import.meta.env.DEV ? '/earth.jpg' : './earth.jpg'
+  loader.load(
+    texturePath,
+    (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace
+      const earthGeometry = new THREE.SphereGeometry(1, 64, 64)
+      const earthMaterial = new THREE.MeshPhongMaterial({
+        map: texture,
+        specular: new THREE.Color(0x333333),
+        shininess: 15
+      })
+      earth = new THREE.Mesh(earthGeometry, earthMaterial)
+      scene.add(earth)
+    },
+    undefined,
+    (error) => {
+      console.error('Failed to load earth texture:', error)
       createFallbackEarth()
-    })
+    }
+  )
 }
 
 const createFallbackEarth = () => {

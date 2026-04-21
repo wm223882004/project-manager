@@ -218,7 +218,19 @@ function createWindow() {
 
   const isDev = !fs.existsSync(path.join(__dirname, '../dist/index.html'))
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
+    const http = require('http')
+    const checkPort = (port, callback) => {
+      const req = http.get(`http://localhost:${port}`, (res) => {
+        callback(port)
+      })
+      req.on('error', () => {
+        if (port < 5300) checkPort(port + 1, callback)
+      })
+      req.setTimeout(200, () => { req.destroy(); if (port < 5300) checkPort(port + 1, callback) })
+    }
+    checkPort(5173, (availablePort) => {
+      mainWindow.loadURL(`http://localhost:${availablePort}`)
+    })
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
