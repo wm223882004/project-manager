@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <canvas ref="canvasRef" class="background-canvas"></canvas>
-    <Earth3D ref="earthRef" class="earth-layer" :projects="projects" />
+    <Earth3D ref="earthRef" class="earth-layer" :projects="projects" @showProject="handleShowProject" />
     <Sidebar
       :activeModule="activeModule"
       :sidebarWidth="sidebarWidth"
@@ -99,6 +99,11 @@ const handleModuleAction = (module) => {
 }
 
 const handleViewProject = (project) => {
+  viewProjectData.value = project
+  activeModule.value = 'projects'
+}
+
+const handleShowProject = (project) => {
   viewProjectData.value = project
   activeModule.value = 'projects'
 }

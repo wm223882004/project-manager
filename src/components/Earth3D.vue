@@ -47,6 +47,8 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import html2canvas from 'html2canvas'
 
+const emit = defineEmits(['showProject'])
+
 const props = defineProps({
   projects: { type: Array, default: () => [] }
 })
@@ -320,6 +322,7 @@ const init = () => {
   mouse = new THREE.Vector2()
 
   renderer.domElement.addEventListener('mousemove', onMouseMove)
+  renderer.domElement.addEventListener('click', onClick)
 
   createStarfield()
   createEarth()
@@ -348,20 +351,43 @@ const onMouseMove = (event) => {
 
   if (showProjectMarkers.value && projectMarkers.length > 0) {
     raycaster.setFromCamera(mouse, camera)
-    const intersects = raycaster.intersectObjects(projectMarkers)
+
+    // 获取所有标记的子对象用于检测
+    const markerMeshes = []
+    projectMarkers.forEach(group => {
+      if (group.visible) {
+        group.children.forEach(child => {
+          if (child.isMesh) {
+            markerMeshes.push(child)
+          }
+        })
+      }
+    })
+
+    const intersects = raycaster.intersectObjects(markerMeshes)
 
     if (intersects.length > 0) {
-      const sprite = intersects[0].object
-      hoveredProject.value = sprite.userData.project
+      // 找到对应的group
+      const hitMesh = intersects[0].object
+      let hitGroup = null
+      projectMarkers.forEach(group => {
+        if (group.children.includes(hitMesh)) {
+          hitGroup = group
+        }
+      })
 
-      // Position tooltip
-      if (tooltipRef.value) {
-        const screenPos = intersects[0].point.clone().project(camera)
-        const x = (screenPos.x * 0.5 + 0.5) * rect.width
-        const y = (-screenPos.y * 0.5 + 0.5) * rect.height
-        tooltipRef.value.style.left = `${x + 15}px`
-        tooltipRef.value.style.top = `${y - 10}px`
-        tooltipRef.value.style.opacity = '1'
+      if (hitGroup && hitGroup.userData.project) {
+        hoveredProject.value = hitGroup.userData.project
+
+        // Position tooltip
+        if (tooltipRef.value) {
+          const screenPos = intersects[0].point.clone().project(camera)
+          const x = (screenPos.x * 0.5 + 0.5) * rect.width
+          const y = (-screenPos.y * 0.5 + 0.5) * rect.height
+          tooltipRef.value.style.left = `${x + 15}px`
+          tooltipRef.value.style.top = `${y - 10}px`
+          tooltipRef.value.style.opacity = '1'
+        }
       }
     } else {
       hoveredProject.value = null
@@ -376,6 +402,45 @@ const onControlsStart = () => {
   if (isAutoRotating) {
     autoRotate.value = false
     isAutoRotating = false
+  }
+}
+
+const onClick = (event) => {
+  if (!renderer || !camera) return
+
+  const rect = renderer.domElement.getBoundingClientRect()
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+  if (showProjectMarkers.value && projectMarkers.length > 0) {
+    raycaster.setFromCamera(mouse, camera)
+
+    const markerMeshes = []
+    projectMarkers.forEach(group => {
+      if (group.visible) {
+        group.children.forEach(child => {
+          if (child.isMesh) {
+            markerMeshes.push(child)
+          }
+        })
+      }
+    })
+
+    const intersects = raycaster.intersectObjects(markerMeshes)
+
+    if (intersects.length > 0) {
+      const hitMesh = intersects[0].object
+      let hitGroup = null
+      projectMarkers.forEach(group => {
+        if (group.children.includes(hitMesh)) {
+          hitGroup = group
+        }
+      })
+
+      if (hitGroup && hitGroup.userData.project) {
+        emit('showProject', hitGroup.userData.project)
+      }
+    }
   }
 }
 
@@ -558,14 +623,22 @@ const clearProjectMarkers = () => {
 }
 
 const filterProjectMarkers = () => {
-  projectMarkers.forEach(sprite => {
-    const project = sprite.userData.project
+  projectMarkers.forEach(marker => {
+    const project = marker.userData.project
     if (activeStatusFilter.value.length === 0) {
-      sprite.visible = true
+      marker.visible = true
     } else {
-      sprite.visible = activeStatusFilter.value.includes(project.status)
+      marker.visible = activeStatusFilter.value.includes(project.status)
     }
   })
+}
+
+// 状态颜色映射
+const statusColors = {
+  '进行中': 0x4a90d9,  // 蓝色
+  '已完成': 0x48bb78,  // 绿色
+  '已暂停': 0xed8936,  // 橙色
+  '已延期': 0xef6461  // 红色
 }
 
 const createProjectMarkers = () => {
@@ -580,13 +653,10 @@ const createProjectMarkers = () => {
   // Group projects by location
   const projectsByLocation = {}
   props.projects.forEach(p => {
-    console.log('[Earth3D] project:', p.name, 'lat:', p.lat, 'lon:', p.lon, 'location:', p.location)
-
     // Try to get lat/lon - from project directly or from cityCoords fallback
     let lat = p.lat
     let lon = p.lon
 
-    // Fallback: try to find in cityCoords using location or city_name
     if ((!lat || !lon) && p.location) {
       const locationName = p.location.replace(/市|区|县/g, '')
       if (cityCoords[p.location]) {
@@ -598,7 +668,6 @@ const createProjectMarkers = () => {
       }
     }
 
-    // Fallback: try city_name field
     if ((!lat || !lon) && p.city_name) {
       const cityName = p.city_name.replace(/市|区|县/g, '')
       if (cityCoords[p.city_name]) {
@@ -622,59 +691,103 @@ const createProjectMarkers = () => {
   console.log('[Earth3D] projects with location:', Object.keys(projectsByLocation).length)
 
   // Create markers for each location
-  Object.entries(projectsByLocation).forEach(([key, projects]) => {
+  Object.entries(projectsByLocation).forEach(([key, projects], locationIndex) => {
     const [lat, lon] = key.split(',').map(Number)
 
-    // Stack markers vertically if multiple projects at same location
+    // 同一位置的多个项目，水平错开（不同角度）
     projects.forEach((project, index) => {
-      const offset = 0.03 * index // Vertical offset for stacking
-      const pos = lon2xyz(1.02, lon, lat)
+      const angleOffset = (index - (projects.length - 1) / 2) * 0.12 // 角度偏移
+      const pos = lon2xyz(1.025, lon, lat)
 
-      // Create marker sprite
-      const markerDiv = document.createElement('div')
-      markerDiv.className = 'project-marker'
-      markerDiv.textContent = project.code
+      // 创建标记组
+      const markerGroup = new THREE.Group()
+      markerGroup.userData.project = project
+      markerGroup.userData.basePosition = pos.clone()
+      markerGroup.userData.angleOffset = angleOffset
+      markerGroup.userData.locationIndex = locationIndex
+      markerGroup.userData.index = index
+      markerGroup.userData.label = null // 标签引用
 
-      const canvas = document.createElement('canvas')
-      canvas.width = 128
-      canvas.height = 64
-      const ctx = canvas.getContext('2d')
+      // 四棱锥（尖朝下）
+      const color = statusColors[project.status] || 0x4a90d9
+      const coneGeometry = new THREE.ConeGeometry(0.01, 0.02, 4)
+      const coneMaterial = new THREE.MeshPhongMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.9,
+        shininess: 100,
+        specular: 0x666666
+      })
+      const cone = new THREE.Mesh(coneGeometry, coneMaterial)
+      cone.rotation.x = Math.PI // 尖朝下
+      markerGroup.add(cone)
 
-      // Draw semi-transparent circle
-      ctx.fillStyle = 'rgba(74, 144, 217, 0.8)'
-      ctx.beginPath()
-      ctx.arc(32, 32, 24, 0, Math.PI * 2)
+      // 光环（圆环）
+      const ringGeometry = new THREE.RingGeometry(0.012, 0.016, 4)
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide
+      })
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial)
+      ring.rotation.x = Math.PI / 2
+      ring.position.y = -0.012
+      markerGroup.add(ring)
+      markerGroup.userData.ring = ring
+
+      // 创建标签（项目编号+名称）
+      const labelCanvas = document.createElement('canvas')
+      const ctx = labelCanvas.getContext('2d')
+      labelCanvas.width = 256
+      labelCanvas.height = 80
+
+      // 背景
+      ctx.fillStyle = 'rgba(10, 25, 50, 0.85)'
+      ctx.roundRect(0, 0, 256, 80, 8)
       ctx.fill()
 
-      // Draw border
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+      // 边框
+      ctx.strokeStyle = `rgba(${parseInt(color.toString(16).substr(0,2), 16)}, ${parseInt(color.toString(16).substr(2,2), 16)}, ${parseInt(color.toString(16).substr(4,2), 16)}, 0.8)`
       ctx.lineWidth = 2
+      ctx.roundRect(0, 0, 256, 80, 8)
       ctx.stroke()
 
-      // Draw code text
-      ctx.fillStyle = 'white'
-      ctx.font = 'bold 14px Arial'
+      // 项目编号
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 20px Arial'
       ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(project.code.substring(0, 6), 32, 32)
+      ctx.fillText(project.code, 128, 30)
 
-      const texture = new THREE.CanvasTexture(canvas)
-      texture.needsUpdate = true
+      // 项目名称
+      ctx.font = '14px Arial'
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
+      const displayName = project.name.length > 14 ? project.name.substring(0, 14) + '...' : project.name
+      ctx.fillText(displayName, 128, 55)
 
-      const material = new THREE.SpriteMaterial({
-        map: texture,
+      const labelTexture = new THREE.CanvasTexture(labelCanvas)
+      const labelMaterial = new THREE.SpriteMaterial({
+        map: labelTexture,
         transparent: true,
-        opacity: 0.9
+        depthTest: false
       })
+      const label = new THREE.Sprite(labelMaterial)
+      label.scale.set(0.06, 0.02, 1)
+      label.position.y = 0.035 // 在棱锥上方
+      label.visible = true
+      markerGroup.add(label)
+      markerGroup.userData.label = label
 
-      const sprite = new THREE.Sprite(material)
-      sprite.position.set(pos.x, pos.y + offset, pos.z)
-      sprite.scale.set(0.08, 0.04, 1)
-      sprite.userData.project = project
-      sprite.userData.basePosition = pos
+      // 设置位置（带角度偏移）
+      const finalPos = new THREE.Vector3(
+        pos.x + Math.sin(angleOffset) * 0.015,
+        pos.y,
+        pos.z + Math.cos(angleOffset) * 0.015
+      )
+      markerGroup.position.copy(finalPos)
 
-      scene.add(sprite)
-      projectMarkers.push(sprite)
+      scene.add(markerGroup)
+      projectMarkers.push(markerGroup)
     })
   })
 }
@@ -725,14 +838,31 @@ const animate = () => {
 
   // 旋转项目标记 - 跟随地球
   if (earth && isAutoRotating && showProjectMarkers.value) {
-    projectMarkers.forEach((sprite) => {
-      const basePos = sprite.userData.basePosition
+    projectMarkers.forEach((group) => {
+      const basePos = group.userData.basePosition
+      const angleOffset = group.userData.angleOffset
       if (basePos) {
         // 绕Y轴旋转 (正确的旋转矩阵)
         const angle = earth.rotation.y
         const x = basePos.x * Math.cos(angle) + basePos.z * Math.sin(angle)
         const z = -basePos.x * Math.sin(angle) + basePos.z * Math.cos(angle)
-        sprite.position.set(x, basePos.y, z)
+
+        // 重新应用角度偏移
+        const finalX = x + Math.sin(angleOffset) * 0.015
+        const finalZ = z + Math.cos(angleOffset) * 0.015
+        group.position.set(finalX, basePos.y, finalZ)
+      }
+    })
+  }
+
+  // 光环脉冲动画
+  if (showProjectMarkers.value) {
+    ringPulseTime += 0.05
+    const pulseScale = 1 + Math.sin(ringPulseTime) * 0.3 // 1到1.3之间脉冲
+    projectMarkers.forEach((group) => {
+      if (group.visible && group.userData.ring) {
+        group.userData.ring.scale.set(pulseScale, pulseScale, 1)
+        group.userData.ring.material.opacity = 0.3 + Math.sin(ringPulseTime) * 0.3
       }
     })
   }
@@ -740,6 +870,9 @@ const animate = () => {
   controls.update()
   renderer.render(scene, camera)
 }
+
+// 光环动画状态
+let ringPulseTime = 0
 
 const onResize = () => {
   if (!containerRef.value) return
