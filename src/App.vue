@@ -2,6 +2,7 @@
   <div class="app">
     <canvas ref="canvasRef" class="background-canvas"></canvas>
     <Earth3D ref="earthRef" class="earth-layer" :projects="projects" @showProject="handleShowProject" />
+
     <Sidebar
       :activeModule="activeModule"
       :sidebarWidth="sidebarWidth"

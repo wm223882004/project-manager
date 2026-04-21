@@ -67,5 +67,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getManagementFeesByProject: (projectId) => ipcRenderer.invoke('db:management_fees:getByProject', projectId),
   createManagementFee: (data) => ipcRenderer.invoke('db:management_fees:create', data),
   updateManagementFee: (data) => ipcRenderer.invoke('db:management_fees:update', data),
-  deleteManagementFee: (id) => ipcRenderer.invoke('db:management_fees:delete', id)
+  deleteManagementFee: (id) => ipcRenderer.invoke('db:management_fees:delete', id),
+
+  // Clients
+  getClients: () => ipcRenderer.invoke('db:clients:getAll'),
+  getClientById: (id) => ipcRenderer.invoke('db:clients:getById', id),
+  createClient: (data) => ipcRenderer.invoke('db:clients:create', data),
+  updateClient: (data) => ipcRenderer.invoke('db:clients:update', data),
+  deleteClient: (id) => ipcRenderer.invoke('db:clients:delete', id),
+
+  // Project Income
+  getProjectIncome: () => ipcRenderer.invoke('db:project_income:getAll'),
+  getProjectIncomeByProject: (projectId) => ipcRenderer.invoke('db:project_income:getByProject', projectId),
+  createProjectIncome: (data) => ipcRenderer.invoke('db:project_income:create', data),
+  updateProjectIncome: (data) => ipcRenderer.invoke('db:project_income:update', data),
+  deleteProjectIncome: (id) => ipcRenderer.invoke('db:project_income:delete', id),
+
+  // Project Expense
+  getProjectExpenses: () => ipcRenderer.invoke('db:project_expense:getAll'),
+  getProjectExpensesByProject: (projectId) => ipcRenderer.invoke('db:project_expense:getByProject', projectId),
+  createProjectExpense: (data) => ipcRenderer.invoke('db:project_expense:create', data),
+  updateProjectExpense: (data) => ipcRenderer.invoke('db:project_expense:update', data),
+  deleteProjectExpense: (id) => ipcRenderer.invoke('db:project_expense:delete', id)
 })

@@ -179,12 +179,64 @@ async function initDatabase() {
     )
   `)
 
+  // 客户/甲方表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS clients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      contact_person TEXT,
+      phone TEXT,
+      email TEXT,
+      address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  // 项目收入记录表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS project_income (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER,
+      invoice_id INTEGER,
+      amount REAL,
+      expected_date DATE,
+      actual_date DATE,
+      status TEXT DEFAULT '待收款',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `)
+
+  // 项目实际支出表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS project_expense (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER,
+      category TEXT,
+      amount REAL,
+      expense_date DATE,
+      description TEXT,
+      receipt_no TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `)
+
   // 添加responsible_person和updated_at到projects表
   try {
     db.run("ALTER TABLE projects ADD COLUMN responsible_person TEXT")
   } catch (e) {}
   try {
     db.run("ALTER TABLE projects ADD COLUMN updated_at DATETIME")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE projects ADD COLUMN client_id INTEGER")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE projects ADD COLUMN description TEXT")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE projects ADD COLUMN priority TEXT DEFAULT '中'")
   } catch (e) {}
 
   // 添加responsible_person和updated_at到contracts表
@@ -193,6 +245,12 @@ async function initDatabase() {
   } catch (e) {}
   try {
     db.run("ALTER TABLE contracts ADD COLUMN updated_at DATETIME")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE contracts ADD COLUMN payment_status TEXT DEFAULT '未付款'")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE contracts ADD COLUMN client_id INTEGER")
   } catch (e) {}
 
   // 添加responsible_person和updated_at到invoices表
@@ -225,6 +283,17 @@ async function initDatabase() {
   } catch (e) {}
   try {
     db.run("ALTER TABLE project_budgets ADD COLUMN updated_at DATETIME")
+  } catch (e) {}
+
+  // 添加priority和工时到project_tasks表
+  try {
+    db.run("ALTER TABLE project_tasks ADD COLUMN priority TEXT DEFAULT '中'")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE project_tasks ADD COLUMN estimated_hours REAL")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE project_tasks ADD COLUMN actual_hours REAL")
   } catch (e) {}
 
   // 插入模拟数据
@@ -1319,14 +1388,14 @@ ipcMain.handle('db:tasks:getByProject', (_, projectId) => {
 })
 
 ipcMain.handle('db:tasks:create', (_, data) => {
-  return runQuery('INSERT INTO project_tasks (project_id, name, status, due_date) VALUES (?, ?, ?, ?)',
-    [data.project_id, data.name, data.status || '待开始', data.due_date || null])
+  return runQuery('INSERT INTO project_tasks (project_id, name, status, due_date, priority, estimated_hours, actual_hours) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [data.project_id, data.name, data.status || '待开始', data.due_date || null, data.priority || '中', data.estimated_hours || null, data.actual_hours || null])
 })
 
 ipcMain.handle('db:tasks:update', (_, data) => {
   const completed_at = data.status === '已完成' ? new Date().toISOString() : null
-  runQuery('UPDATE project_tasks SET project_id = ?, name = ?, status = ?, due_date = ?, completed_at = ? WHERE id = ?',
-    [data.project_id, data.name, data.status, data.due_date, completed_at, data.id])
+  runQuery('UPDATE project_tasks SET project_id = ?, name = ?, status = ?, due_date = ?, completed_at = ?, priority = ?, estimated_hours = ?, actual_hours = ? WHERE id = ?',
+    [data.project_id, data.name, data.status, data.due_date, completed_at, data.priority || '中', data.estimated_hours || null, data.actual_hours || null, data.id])
   return data
 })
 
@@ -1373,6 +1442,114 @@ ipcMain.handle('db:management_fees:update', (_, data) => {
 
 ipcMain.handle('db:management_fees:delete', (_, id) => {
   runQuery('DELETE FROM management_fees WHERE id = ?', [id])
+  return { success: true }
+})
+
+// Clients
+ipcMain.handle('db:clients:getAll', () => {
+  return queryAll('SELECT * FROM clients ORDER BY created_at DESC')
+})
+
+ipcMain.handle('db:clients:getById', (_, id) => {
+  const result = queryAll('SELECT * FROM clients WHERE id = ?', [id])
+  return result.length > 0 ? result[0] : null
+})
+
+ipcMain.handle('db:clients:create', (_, data) => {
+  return runQuery('INSERT INTO clients (name, contact_person, phone, email, address) VALUES (?, ?, ?, ?, ?)',
+    [data.name, data.contact_person || '', data.phone || '', data.email || '', data.address || ''])
+})
+
+ipcMain.handle('db:clients:update', (_, data) => {
+  runQuery('UPDATE clients SET name = ?, contact_person = ?, phone = ?, email = ?, address = ? WHERE id = ?',
+    [data.name, data.contact_person || '', data.phone || '', data.email || '', data.address || '', data.id])
+  return data
+})
+
+ipcMain.handle('db:clients:delete', (_, id) => {
+  runQuery('DELETE FROM clients WHERE id = ?', [id])
+  return { success: true }
+})
+
+// Project Income
+ipcMain.handle('db:project_income:getAll', () => {
+  const income = queryAll(`
+    SELECT pi.*, p.name as project_name
+    FROM project_income pi
+    LEFT JOIN projects p ON pi.project_id = p.id
+    ORDER BY pi.created_at DESC
+  `)
+  return income
+})
+
+ipcMain.handle('db:project_income:getByProject', (_, projectId) => {
+  return queryAll(`
+    SELECT pi.*, p.name as project_name
+    FROM project_income pi
+    LEFT JOIN projects p ON pi.project_id = p.id
+    WHERE pi.project_id = ?
+    ORDER BY pi.created_at DESC
+  `, [projectId])
+})
+
+ipcMain.handle('db:project_income:create', (_, data) => {
+  return runQuery(
+    'INSERT INTO project_income (project_id, invoice_id, amount, expected_date, actual_date, status) VALUES (?, ?, ?, ?, ?, ?)',
+    [data.project_id, data.invoice_id || null, data.amount, data.expected_date || null, data.actual_date || null, data.status || '待收款']
+  )
+})
+
+ipcMain.handle('db:project_income:update', (_, data) => {
+  runQuery(
+    'UPDATE project_income SET project_id = ?, invoice_id = ?, amount = ?, expected_date = ?, actual_date = ?, status = ? WHERE id = ?',
+    [data.project_id, data.invoice_id || null, data.amount, data.expected_date || null, data.actual_date || null, data.status, data.id]
+  )
+  return data
+})
+
+ipcMain.handle('db:project_income:delete', (_, id) => {
+  runQuery('DELETE FROM project_income WHERE id = ?', [id])
+  return { success: true }
+})
+
+// Project Expense
+ipcMain.handle('db:project_expense:getAll', () => {
+  const expense = queryAll(`
+    SELECT pe.*, p.name as project_name
+    FROM project_expense pe
+    LEFT JOIN projects p ON pe.project_id = p.id
+    ORDER BY pe.created_at DESC
+  `)
+  return expense
+})
+
+ipcMain.handle('db:project_expense:getByProject', (_, projectId) => {
+  return queryAll(`
+    SELECT pe.*, p.name as project_name
+    FROM project_expense pe
+    LEFT JOIN projects p ON pe.project_id = p.id
+    WHERE pe.project_id = ?
+    ORDER BY pe.created_at DESC
+  `, [projectId])
+})
+
+ipcMain.handle('db:project_expense:create', (_, data) => {
+  return runQuery(
+    'INSERT INTO project_expense (project_id, category, amount, expense_date, description, receipt_no) VALUES (?, ?, ?, ?, ?, ?)',
+    [data.project_id, data.category, data.amount, data.expense_date || null, data.description || '', data.receipt_no || '']
+  )
+})
+
+ipcMain.handle('db:project_expense:update', (_, data) => {
+  runQuery(
+    'UPDATE project_expense SET project_id = ?, category = ?, amount = ?, expense_date = ?, description = ?, receipt_no = ? WHERE id = ?',
+    [data.project_id, data.category, data.amount, data.expense_date || null, data.description || '', data.receipt_no || '', data.id]
+  )
+  return data
+})
+
+ipcMain.handle('db:project_expense:delete', (_, id) => {
+  runQuery('DELETE FROM project_expense WHERE id = ?', [id])
   return { success: true }
 })
 

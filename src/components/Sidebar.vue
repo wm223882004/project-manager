@@ -489,18 +489,58 @@
         </div>
         <div class="item-list">
           <div v-if="filteredItems.length === 0" class="no-data">{{ emptyText }}</div>
-          <div
-            v-for="item in filteredItems"
-            :key="item.id"
-            :class="['item-row', { selected: selectedItem && selectedItem.id === item.id }]"
-            @click="console.log('item-row clicked:', item.id), selectItem(item)"
-          >
-            <div class="item-info">
-              <span class="item-title">{{ item.name || item.invoice_no || item.receipt_no || item.title }}</span>
-              <span class="item-sub">{{ getItemSub(item) }}</span>
+
+          <!-- 项目卡片视图 -->
+          <template v-if="activeModule === 'projects'">
+            <div
+              v-for="item in filteredItems"
+              :key="item.id"
+              :class="['project-card', { selected: selectedItem && selectedItem.id === item.id }]"
+              @click="selectItem(item)"
+            >
+              <div class="card-top">
+                <span class="project-name">{{ item.name }}</span>
+                <span :class="['status-badge', item.status]">{{ item.status }}</span>
+              </div>
+              <div class="card-info-row">
+                <span class="info-item">📍 {{ item.location || '未设置' }}</span>
+                <span class="info-item">👤 {{ item.manager || '未指定' }}</span>
+              </div>
+              <div class="card-progress-row">
+                <div class="progress-info">
+                  <span>进度</span>
+                  <span>{{ item.task_progress || 0 }}%</span>
+                </div>
+                <div class="progress-bar-small">
+                  <div
+                    class="progress-fill"
+                    :class="getProgressClass(item.task_progress)"
+                    :style="{ width: (item.task_progress || 0) + '%' }"
+                  ></div>
+                </div>
+              </div>
+              <div class="card-budget-row">
+                <span class="budget-label">预算</span>
+                <span class="budget-value">¥{{ formatAmount(item.total_budget) }}</span>
+              </div>
             </div>
-            <span v-if="item.status" :class="['item-status', item.status]">{{ item.status }}</span>
-          </div>
+          </template>
+
+          <!-- 其他模块列表视图 -->
+          <template v-else>
+            <div
+              v-for="item in filteredItems"
+              :key="item.id"
+              :class="['item-row', { selected: selectedItem && selectedItem.id === item.id }]"
+              @click="selectItem(item)"
+            >
+              <div class="item-info">
+                <span class="item-title">{{ item.name || item.invoice_no || item.receipt_no || item.title }}</span>
+                <span class="item-sub">{{ getItemSub(item) }}</span>
+              </div>
+              <span v-if="item.status" :class="['item-status', item.status]">{{ item.status }}</span>
+            </div>
+          </template>
         </div>
       </nav>
       <div class="panel-actions">
@@ -1275,6 +1315,13 @@ const selectSubTab = (key) => {
 const formatAmount = (amount) => {
   if (!amount) return '0'
   return Number(amount).toLocaleString()
+}
+
+const getProgressClass = (progress) => {
+  if (!progress || progress < 25) return 'low'
+  if (progress < 50) return 'medium'
+  if (progress < 75) return 'high'
+  return 'excellent'
 }
 
 const handleTabClick = (key) => {
@@ -2593,5 +2640,148 @@ onMounted(() => {
 
 .budget-thresholds .threshold.red {
   background: #ef6461;
+}
+
+/* Project Card Styles */
+.project-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(100, 150, 255, 0.12);
+  border-radius: 10px;
+  padding: 14px;
+  margin: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.project-card:hover {
+  background: rgba(100, 150, 255, 0.12);
+  border-color: rgba(74, 144, 217, 0.4);
+  transform: translateY(-1px);
+}
+
+.project-card.selected {
+  background: rgba(74, 144, 217, 0.2);
+  border-color: rgba(74, 144, 217, 0.5);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.project-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  flex: 1;
+  margin-right: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.status-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.status-badge.进行中 {
+  background: rgba(74, 144, 217, 0.2);
+  color: #4a90d9;
+}
+
+.status-badge.已完成 {
+  background: rgba(72, 187, 120, 0.2);
+  color: #48bb78;
+}
+
+.status-badge.已暂停 {
+  background: rgba(237, 137, 54, 0.2);
+  color: #ed8936;
+}
+
+.status-badge.已延期 {
+  background: rgba(237, 100, 100, 0.2);
+  color: #ef6461;
+}
+
+.card-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.info-item {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-progress-row {
+  margin-bottom: 10px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 5px;
+}
+
+.progress-bar-small {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-fill.low {
+  background: linear-gradient(90deg, #ef4444, #fc8181);
+}
+
+.progress-fill.medium {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.progress-fill.high {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.progress-fill.excellent {
+  background: linear-gradient(90deg, #10b981, #68d391);
+}
+
+.card-budget-row {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid rgba(100, 150, 255, 0.1);
+}
+
+.card-budget-row .budget-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.card-budget-row .budget-value {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
 }
 </style>
