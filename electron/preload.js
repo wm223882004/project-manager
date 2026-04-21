@@ -60,5 +60,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTasksByProject: (projectId) => ipcRenderer.invoke('db:tasks:getByProject', projectId),
   createTask: (data) => ipcRenderer.invoke('db:tasks:create', data),
   updateTask: (data) => ipcRenderer.invoke('db:tasks:update', data),
-  deleteTask: (id) => ipcRenderer.invoke('db:tasks:delete', id)
+  deleteTask: (id) => ipcRenderer.invoke('db:tasks:delete', id),
+
+  // Management Fees
+  getManagementFees: () => ipcRenderer.invoke('db:management_fees:getAll'),
+  getManagementFeesByProject: (projectId) => ipcRenderer.invoke('db:management_fees:getByProject', projectId),
+  createManagementFee: (data) => ipcRenderer.invoke('db:management_fees:create', data),
+  updateManagementFee: (data) => ipcRenderer.invoke('db:management_fees:update', data),
+  deleteManagementFee: (id) => ipcRenderer.invoke('db:management_fees:delete', id)
 })

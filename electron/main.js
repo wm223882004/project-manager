@@ -155,11 +155,77 @@ async function initDatabase() {
       name TEXT NOT NULL,
       status TEXT DEFAULT '待开始',
       due_date DATE,
+      responsible_person TEXT,
       completed_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (project_id) REFERENCES projects(id)
     )
   `)
+
+  // 管理费用表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS management_fees (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER,
+      category TEXT NOT NULL,
+      amount REAL,
+      description TEXT,
+      responsible_person TEXT,
+      fee_date DATE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `)
+
+  // 添加responsible_person和updated_at到projects表
+  try {
+    db.run("ALTER TABLE projects ADD COLUMN responsible_person TEXT")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE projects ADD COLUMN updated_at DATETIME")
+  } catch (e) {}
+
+  // 添加responsible_person和updated_at到contracts表
+  try {
+    db.run("ALTER TABLE contracts ADD COLUMN responsible_person TEXT")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE contracts ADD COLUMN updated_at DATETIME")
+  } catch (e) {}
+
+  // 添加responsible_person和updated_at到invoices表
+  try {
+    db.run("ALTER TABLE invoices ADD COLUMN responsible_person TEXT")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE invoices ADD COLUMN updated_at DATETIME")
+  } catch (e) {}
+
+  // 添加responsible_person和updated_at到payments表
+  try {
+    db.run("ALTER TABLE payments ADD COLUMN responsible_person TEXT")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE payments ADD COLUMN updated_at DATETIME")
+  } catch (e) {}
+
+  // 添加responsible_person和updated_at到acceptances表
+  try {
+    db.run("ALTER TABLE acceptances ADD COLUMN responsible_person TEXT")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE acceptances ADD COLUMN updated_at DATETIME")
+  } catch (e) {}
+
+  // 添加responsible_person和updated_at到project_budgets表
+  try {
+    db.run("ALTER TABLE project_budgets ADD COLUMN responsible_person TEXT")
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE project_budgets ADD COLUMN updated_at DATETIME")
+  } catch (e) {}
 
   // 插入模拟数据
   seedCitiesData()
@@ -1266,6 +1332,47 @@ ipcMain.handle('db:tasks:update', (_, data) => {
 
 ipcMain.handle('db:tasks:delete', (_, id) => {
   runQuery('DELETE FROM project_tasks WHERE id = ?', [id])
+  return { success: true }
+})
+
+// Management Fees
+ipcMain.handle('db:management_fees:getAll', () => {
+  const fees = queryAll(`
+    SELECT mf.*, p.name as project_name
+    FROM management_fees mf
+    LEFT JOIN projects p ON mf.project_id = p.id
+    ORDER BY mf.created_at DESC
+  `)
+  return fees
+})
+
+ipcMain.handle('db:management_fees:getByProject', (_, projectId) => {
+  return queryAll(`
+    SELECT mf.*, p.name as project_name
+    FROM management_fees mf
+    LEFT JOIN projects p ON mf.project_id = p.id
+    WHERE mf.project_id = ?
+    ORDER BY mf.created_at DESC
+  `, [projectId])
+})
+
+ipcMain.handle('db:management_fees:create', (_, data) => {
+  return runQuery(
+    'INSERT INTO management_fees (project_id, category, amount, description, responsible_person, fee_date) VALUES (?, ?, ?, ?, ?, ?)',
+    [data.project_id, data.category, data.amount, data.description, data.responsible_person, data.fee_date]
+  )
+})
+
+ipcMain.handle('db:management_fees:update', (_, data) => {
+  runQuery(
+    'UPDATE management_fees SET project_id = ?, category = ?, amount = ?, description = ?, responsible_person = ?, fee_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [data.project_id, data.category, data.amount, data.description, data.responsible_person, data.fee_date, data.id]
+  )
+  return data
+})
+
+ipcMain.handle('db:management_fees:delete', (_, id) => {
+  runQuery('DELETE FROM management_fees WHERE id = ?', [id])
   return { success: true }
 })
 

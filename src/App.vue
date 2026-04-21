@@ -96,6 +96,10 @@ const handleAction = async (payload) => {
       if (type === 'add') await api.createTask(data)
       else if (type === 'edit') await api.updateTask(data)
       else if (type === 'delete') { if (confirm('确定要删除此任务吗？')) await api.deleteTask(data.id) }
+    } else if (module === 'management_fees') {
+      if (type === 'add') await api.createManagementFee(data)
+      else if (type === 'edit') await api.updateManagementFee(data)
+      else if (type === 'delete') { if (confirm('确定要删除此管理费用吗？')) await api.deleteManagementFee(data.id) }
     }
   } catch (err) {
     console.error('Action failed:', err)
