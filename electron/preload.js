@@ -41,5 +41,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPeople: () => ipcRenderer.invoke('db:people:getAll'),
   createPerson: (data) => ipcRenderer.invoke('db:people:create', data),
   updatePerson: (data) => ipcRenderer.invoke('db:people:update', data),
-  deletePerson: (id) => ipcRenderer.invoke('db:people:delete', id)
+  deletePerson: (id) => ipcRenderer.invoke('db:people:delete', id),
+
+  // Cities
+  getCities: () => ipcRenderer.invoke('db:cities:getAll'),
+  searchCities: (keyword) => ipcRenderer.invoke('db:cities:search', keyword),
+  getCityById: (id) => ipcRenderer.invoke('db:cities:getById', id)
 })

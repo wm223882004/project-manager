@@ -259,7 +259,7 @@
           </div>
           <div class="form-group">
             <label>项目地点</label>
-            <LocationPicker v-model="formData.locationObj" />
+            <CityPicker v-model="formData.cityObj" />
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -431,7 +431,7 @@
 
 <script setup>
 import { computed, ref, watch, onMounted } from 'vue'
-import LocationPicker from './LocationPicker.vue'
+import CityPicker from './CityPicker.vue'
 
 const props = defineProps({
   activeModule: {
@@ -780,7 +780,7 @@ const closePanel = () => {
 const getDefaultFormData = () => {
   switch (props.activeModule) {
     case 'projects':
-      return { name: '', code: '', location: '', locationObj: {}, start_date: '', end_date: '', status: '进行中', manager: '' }
+      return { name: '', code: '', city_id: null, cityObj: null, start_date: '', end_date: '', status: '进行中', manager: '' }
     case 'contracts':
       return { project_id: '', name: '', amount: '', signed_date: '' }
     case 'invoices':
@@ -804,8 +804,8 @@ const handleAction = (action) => {
     selectedItem.value = null
   } else if (action === 'edit' && selectedItem.value) {
     formData.value = { ...selectedItem.value }
-    if (formData.value.locationObj === undefined) {
-      formData.value.locationObj = {}
+    if (formData.value.cityObj === undefined) {
+      formData.value.cityObj = null
     }
   }
   showForm.value = true
@@ -821,13 +821,11 @@ const formData = ref(getDefaultFormData())
 const saveForm = async () => {
   const saveData = { ...formData.value }
 
-  // 项目处理地点
-  if (props.activeModule === 'projects' && formData.value.locationObj) {
-    const locationStr = formData.value.locationObj.countryName
-      ? [formData.value.locationObj.countryName, formData.value.locationObj.provinceName, formData.value.locationObj.cityName, formData.value.locationObj.districtName, formData.value.locationObj.streetName].filter(Boolean).join(' / ')
-      : ''
-    saveData.location = locationStr
-    delete saveData.locationObj
+  // 项目处理地点 - 使用cityObj
+  if (props.activeModule === 'projects' && formData.value.cityObj) {
+    saveData.city_id = formData.value.cityObj.id
+    saveData.location = formData.value.cityObj.display_name
+    delete saveData.cityObj
   }
 
   // 删除不需要的字段

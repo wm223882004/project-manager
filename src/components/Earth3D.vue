@@ -1,6 +1,12 @@
 <template>
   <div ref="containerRef" class="earth-container">
     <div ref="labelContainer" class="label-container"></div>
+    <div ref="tooltipRef" class="project-tooltip" v-if="hoveredProject">
+      <div class="tooltip-title">{{ hoveredProject.name }}</div>
+      <div class="tooltip-code">{{ hoveredProject.code }}</div>
+      <div class="tooltip-status" :class="hoveredProject.status">{{ hoveredProject.status }}</div>
+      <div class="tooltip-manager">负责人: {{ hoveredProject.manager }}</div>
+    </div>
     <div class="earth-controls" v-if="showControls">
       <label class="control-item">
         <input type="checkbox" v-model="showLabels" />
@@ -9,6 +15,10 @@
       <label class="control-item">
         <input type="checkbox" v-model="autoRotate" @change="toggleAutoRotate" />
         <span>自动旋转</span>
+      </label>
+      <label class="control-item">
+        <input type="checkbox" v-model="showProjectMarkers" />
+        <span>显示项目</span>
       </label>
     </div>
   </div>
@@ -26,13 +36,19 @@ const props = defineProps({
 
 const containerRef = ref(null)
 const labelContainer = ref(null)
+const tooltipRef = ref(null)
 const showControls = ref(false)
 const showLabels = ref(true)
+const showProjectMarkers = ref(true)
 const autoRotate = ref(true)
+const hoveredProject = ref(null)
 let scene, camera, renderer, controls, earth, labelSprites = []
+let projectMarkers = []
 let animationId
 let isAutoRotating = true
 let sunLight
+let raycaster
+let mouse
 
 // 城市数据
 const cities = [
@@ -265,16 +281,61 @@ const init = () => {
   controls.enablePan = false
   controls.addEventListener('start', onControlsStart)
 
+  raycaster = new THREE.Raycaster()
+  raycaster.params.Sprite = { threshold: 0.1 }
+  mouse = new THREE.Vector2()
+
+  renderer.domElement.addEventListener('mousemove', onMouseMove)
+
   createStarfield()
   createEarth()
   createEarthGlow()
   createAtmosphere()
   createLighting()
-  // createProjectMarkers()  // 暂时禁用
+
+  // Create project markers after scene is ready
+  nextTick(() => {
+    if (props.projects && props.projects.length > 0) {
+      createProjectMarkers()
+    }
+  })
 
   window.addEventListener('resize', onResize)
   showControls.value = true
   animate()
+}
+
+const onMouseMove = (event) => {
+  if (!renderer || !camera) return
+
+  const rect = renderer.domElement.getBoundingClientRect()
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+  if (showProjectMarkers.value && projectMarkers.length > 0) {
+    raycaster.setFromCamera(mouse, camera)
+    const intersects = raycaster.intersectObjects(projectMarkers)
+
+    if (intersects.length > 0) {
+      const sprite = intersects[0].object
+      hoveredProject.value = sprite.userData.project
+
+      // Position tooltip
+      if (tooltipRef.value) {
+        const screenPos = intersects[0].point.clone().project(camera)
+        const x = (screenPos.x * 0.5 + 0.5) * rect.width
+        const y = (-screenPos.y * 0.5 + 0.5) * rect.height
+        tooltipRef.value.style.left = `${x + 15}px`
+        tooltipRef.value.style.top = `${y - 10}px`
+        tooltipRef.value.style.opacity = '1'
+      }
+    } else {
+      hoveredProject.value = null
+      if (tooltipRef.value) {
+        tooltipRef.value.style.opacity = '0'
+      }
+    }
+  }
 }
 
 const onControlsStart = () => {
@@ -457,9 +518,143 @@ const createLighting = () => {
   scene.add(fillLight)
 }
 
+const clearProjectMarkers = () => {
+  projectMarkers.forEach(marker => scene.remove(marker))
+  projectMarkers = []
+}
+
+const createProjectMarkers = () => {
+  console.log('[Earth3D] createProjectMarkers called, projects:', props.projects.length, 'showProjectMarkers:', showProjectMarkers.value)
+  clearProjectMarkers()
+
+  if (!showProjectMarkers.value) {
+    console.log('[Earth3D] showProjectMarkers is false, skipping')
+    return
+  }
+
+  // Group projects by location
+  const projectsByLocation = {}
+  props.projects.forEach(p => {
+    console.log('[Earth3D] project:', p.name, 'lat:', p.lat, 'lon:', p.lon, 'location:', p.location)
+
+    // Try to get lat/lon - from project directly or from cityCoords fallback
+    let lat = p.lat
+    let lon = p.lon
+
+    // Fallback: try to find in cityCoords using location or city_name
+    if ((!lat || !lon) && p.location) {
+      const locationName = p.location.replace(/市|区|县/g, '')
+      if (cityCoords[p.location]) {
+        lat = cityCoords[p.location].lat
+        lon = cityCoords[p.location].lon
+      } else if (cityCoords[locationName]) {
+        lat = cityCoords[locationName].lat
+        lon = cityCoords[locationName].lon
+      }
+    }
+
+    // Fallback: try city_name field
+    if ((!lat || !lon) && p.city_name) {
+      const cityName = p.city_name.replace(/市|区|县/g, '')
+      if (cityCoords[p.city_name]) {
+        lat = cityCoords[p.city_name].lat
+        lon = cityCoords[p.city_name].lon
+      } else if (cityCoords[cityName]) {
+        lat = cityCoords[cityName].lat
+        lon = cityCoords[cityName].lon
+      }
+    }
+
+    if (lat && lon) {
+      const key = `${lat},${lon}`
+      if (!projectsByLocation[key]) {
+        projectsByLocation[key] = []
+      }
+      projectsByLocation[key].push(p)
+    }
+  })
+
+  console.log('[Earth3D] projects with location:', Object.keys(projectsByLocation).length)
+
+  // Create markers for each location
+  Object.entries(projectsByLocation).forEach(([key, projects]) => {
+    const [lat, lon] = key.split(',').map(Number)
+
+    // Stack markers vertically if multiple projects at same location
+    projects.forEach((project, index) => {
+      const offset = 0.03 * index // Vertical offset for stacking
+      const pos = lon2xyz(1.02, lon, lat)
+
+      // Create marker sprite
+      const markerDiv = document.createElement('div')
+      markerDiv.className = 'project-marker'
+      markerDiv.textContent = project.code
+
+      const canvas = document.createElement('canvas')
+      canvas.width = 128
+      canvas.height = 64
+      const ctx = canvas.getContext('2d')
+
+      // Draw semi-transparent circle
+      ctx.fillStyle = 'rgba(74, 144, 217, 0.8)'
+      ctx.beginPath()
+      ctx.arc(32, 32, 24, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Draw border
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'
+      ctx.lineWidth = 2
+      ctx.stroke()
+
+      // Draw code text
+      ctx.fillStyle = 'white'
+      ctx.font = 'bold 14px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(project.code.substring(0, 6), 32, 32)
+
+      const texture = new THREE.CanvasTexture(canvas)
+      texture.needsUpdate = true
+
+      const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.9
+      })
+
+      const sprite = new THREE.Sprite(material)
+      sprite.position.set(pos.x, pos.y + offset, pos.z)
+      sprite.scale.set(0.08, 0.04, 1)
+      sprite.userData.project = project
+      sprite.userData.basePosition = pos
+
+      scene.add(sprite)
+      projectMarkers.push(sprite)
+    })
+  })
+}
+
+watch(() => props.projects, () => {
+  nextTick(() => createProjectMarkers())
+}, { deep: true })
+
+watch(showProjectMarkers, () => {
+  createProjectMarkers()
+})
+
 const toggleAutoRotate = () => {
   isAutoRotating = autoRotate.value
 }
+
+// Expose method for parent to call
+const forceUpdateMarkers = () => {
+  console.log('[Earth3D] forceUpdateMarkers called')
+  createProjectMarkers()
+}
+
+defineExpose({
+  forceUpdateMarkers
+})
 
 const animate = () => {
   animationId = requestAnimationFrame(animate)
@@ -480,6 +675,20 @@ const animate = () => {
       const city = cities[i]
       const pos = lon2xyz(1.08, city.lon, city.lat)
       sprite.position.copy(pos)
+    })
+  }
+
+  // 旋转项目标记 - 跟随地球
+  if (earth && isAutoRotating && showProjectMarkers.value) {
+    projectMarkers.forEach((sprite) => {
+      const basePos = sprite.userData.basePosition
+      if (basePos) {
+        // 绕Y轴旋转 (正确的旋转矩阵)
+        const angle = earth.rotation.y
+        const x = basePos.x * Math.cos(angle) + basePos.z * Math.sin(angle)
+        const z = -basePos.x * Math.sin(angle) + basePos.z * Math.cos(angle)
+        sprite.position.set(x, basePos.y, z)
+      }
     })
   }
 
@@ -555,6 +764,68 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   cursor: pointer;
+}
+
+.project-tooltip {
+  position: absolute;
+  background: rgba(10, 25, 50, 0.95);
+  border: 1px solid rgba(100, 150, 255, 0.4);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 13px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+  min-width: 160px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.tooltip-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #fff;
+}
+
+.tooltip-code {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+.tooltip-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.tooltip-status.进行中 {
+  background: rgba(74, 144, 217, 0.3);
+  color: #4a90d9;
+}
+
+.tooltip-status.已完成 {
+  background: rgba(72, 187, 120, 0.3);
+  color: #48bb78;
+}
+
+.tooltip-status.已暂停 {
+  background: rgba(237, 137, 54, 0.3);
+  color: #ed8936;
+}
+
+.tooltip-status.已延期 {
+  background: rgba(237, 100, 100, 0.3);
+  color: #ef6461;
+}
+
+.tooltip-manager {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
 }
 </style>
 

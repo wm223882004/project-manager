@@ -46,6 +46,10 @@ const currentModuleComponent = computed(() => modules[activeModule.value])
 const loadProjects = async () => {
   try {
     projects.value = await window.electronAPI.getProjects()
+    // Trigger Earth3D to update markers
+    if (earthRef.value) {
+      earthRef.value.forceUpdateMarkers && earthRef.value.forceUpdateMarkers()
+    }
   } catch (err) {
     console.error('Failed to load projects:', err)
   }

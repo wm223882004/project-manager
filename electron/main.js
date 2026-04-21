@@ -26,6 +26,7 @@ async function initDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT,
       name TEXT NOT NULL,
+      city_id INTEGER,
       location TEXT,
       start_date DATE,
       end_date DATE,
@@ -34,6 +35,13 @@ async function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `)
+
+  // Add city_id column if it doesn't exist (for existing databases)
+  try {
+    db.run("ALTER TABLE projects ADD COLUMN city_id INTEGER")
+  } catch (e) {
+    // Column already exists, ignore
+  }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS contracts (
@@ -95,7 +103,22 @@ async function initDatabase() {
     )
   `)
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS cities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      parent_id INTEGER,
+      level TEXT DEFAULT 'city',
+      lat REAL,
+      lon REAL,
+      country TEXT DEFAULT '中国',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
   // 插入模拟数据
+  seedCitiesData()
   seedData()
 
   saveDatabase()
@@ -106,18 +129,32 @@ function seedData() {
   const existingProjects = db.exec("SELECT COUNT(*) FROM projects")[0]
   if (existingProjects && existingProjects.values[0][0] > 0) return
 
-  // 项目数据
+  // 先插入城市数据（如果还没有）
+  seedCitiesData()
+
+  // 获取城市ID映射
+  const cityMap = {}
+  const cities = db.exec("SELECT id, name FROM cities")
+  if (cities.length > 0) {
+    cities[0].values.forEach(row => {
+      cityMap[row[1]] = row[0]
+    })
+  }
+
+  // 项目数据 - 使用city_id
   const projects = [
-    { code: 'PRJ2024001', name: '北京大兴国际机场智慧园区项目', location: '中国 / 北京市 / 大兴区', start_date: '2024-01-15', end_date: '2025-06-30', status: '进行中', manager: '张伟' },
-    { code: 'PRJ2024002', name: '上海自贸区数据中心建设', location: '中国 / 上海市 / 浦东新区', start_date: '2024-03-01', end_date: '2025-03-01', status: '进行中', manager: '李娜' },
-    { code: 'PRJ2023001', name: '深圳地铁14号线智能化系统', location: '中国 / 广东省 / 深圳市', start_date: '2023-06-01', end_date: '2024-12-31', status: '已完成', manager: '王强' },
-    { code: 'PRJ2024003', name: '成都天府国际机场配套工程', location: '中国 / 四川省 / 成都市', start_date: '2024-02-01', end_date: '2026-12-31', status: '已延期', manager: '刘洋' },
-    { code: 'PRJ2024004', name: '杭州亚运会场馆智能化改造', location: '中国 / 浙江省 / 杭州市', start_date: '2024-04-01', end_date: '2025-08-31', status: '已暂停', manager: '陈明' }
+    { code: 'PRJ2024001', name: '北京大兴国际机场智慧园区项目', city_name: '大兴区', start_date: '2024-01-15', end_date: '2025-06-30', status: '进行中', manager: '张伟' },
+    { code: 'PRJ2024002', name: '上海自贸区数据中心建设', city_name: '浦东新区', start_date: '2024-03-01', end_date: '2025-03-01', status: '进行中', manager: '李娜' },
+    { code: 'PRJ2023001', name: '深圳地铁14号线智能化系统', city_name: '深圳市', start_date: '2023-06-01', end_date: '2024-12-31', status: '已完成', manager: '王强' },
+    { code: 'PRJ2024003', name: '成都天府国际机场配套工程', city_name: '成都市', start_date: '2024-02-01', end_date: '2026-12-31', status: '已延期', manager: '刘洋' },
+    { code: 'PRJ2024004', name: '杭州亚运会场馆智能化改造', city_name: '杭州市', start_date: '2024-04-01', end_date: '2025-08-31', status: '已暂停', manager: '陈明' }
   ]
 
   projects.forEach(p => {
-    db.run("INSERT INTO projects (code, name, location, start_date, end_date, status, manager) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [p.code, p.name, p.location, p.start_date, p.end_date, p.status, p.manager])
+    const city_id = cityMap[p.city_name] || null
+    const location = p.city_name
+    db.run("INSERT INTO projects (code, name, city_id, location, start_date, end_date, status, manager) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [p.code, p.name, city_id, location, p.start_date, p.end_date, p.status, p.manager])
   })
 
   // 合同数据
@@ -190,6 +227,257 @@ function seedData() {
   people.forEach(p => {
     db.run("INSERT INTO people (name, position, phone, email) VALUES (?, ?, ?, ?)",
       [p.name, p.position, p.phone, p.email])
+  })
+}
+
+function seedCitiesData() {
+  const existingCities = db.exec("SELECT COUNT(*) FROM cities")[0]
+  if (existingCities && existingCities.values[0][0] > 0) return
+
+  // 省级数据
+  const provinces = [
+    { name: '北京市', display_name: '北京市', lat: 39.9042, lon: 116.4074, level: 'province' },
+    { name: '天津市', display_name: '天津市', lat: 39.3434, lon: 117.3616, level: 'province' },
+    { name: '河北省', display_name: '河北省', lat: 38.0428, lon: 114.5149, level: 'province' },
+    { name: '山西省', display_name: '山西省', lat: 37.8570, lon: 112.5490, level: 'province' },
+    { name: '内蒙古自治区', display_name: '内蒙古自治区', lat: 40.8420, lon: 111.7490, level: 'province' },
+    { name: '辽宁省', display_name: '辽宁省', lat: 41.7968, lon: 123.4315, level: 'province' },
+    { name: '吉林省', display_name: '吉林省', lat: 43.8868, lon: 125.3245, level: 'province' },
+    { name: '黑龙江省', display_name: '黑龙江省', lat: 45.7569, lon: 126.6421, level: 'province' },
+    { name: '上海市', display_name: '上海市', lat: 31.2304, lon: 121.4737, level: 'province' },
+    { name: '江苏省', display_name: '江苏省', lat: 32.0603, lon: 118.7969, level: 'province' },
+    { name: '浙江省', display_name: '浙江省', lat: 30.2873, lon: 120.1536, level: 'province' },
+    { name: '安徽省', display_name: '安徽省', lat: 31.8612, lon: 117.2830, level: 'province' },
+    { name: '福建省', display_name: '福建省', lat: 26.0745, lon: 119.2965, level: 'province' },
+    { name: '江西省', display_name: '江西省', lat: 28.6823, lon: 115.8579, level: 'province' },
+    { name: '山东省', display_name: '山东省', lat: 36.6512, lon: 117.1201, level: 'province' },
+    { name: '河南省', display_name: '河南省', lat: 34.7656, lon: 113.7535, level: 'province' },
+    { name: '湖北省', display_name: '湖北省', lat: 30.5928, lon: 114.3055, level: 'province' },
+    { name: '湖南省', display_name: '湖南省', lat: 28.2282, lon: 112.9388, level: 'province' },
+    { name: '广东省', display_name: '广东省', lat: 23.1291, lon: 113.2644, level: 'province' },
+    { name: '广西壮族自治区', display_name: '广西壮族自治区', lat: 22.8170, lon: 108.3665, level: 'province' },
+    { name: '海南省', display_name: '海南省', lat: 19.5664, lon: 109.9497, level: 'province' },
+    { name: '重庆市', display_name: '重庆市', lat: 29.5630, lon: 106.5516, level: 'province' },
+    { name: '四川省', display_name: '四川省', lat: 30.5728, lon: 104.0668, level: 'province' },
+    { name: '贵州省', display_name: '贵州省', lat: 26.5980, lon: 106.7073, level: 'province' },
+    { name: '云南省', display_name: '云南省', lat: 25.0406, lon: 102.7123, level: 'province' },
+    { name: '西藏自治区', display_name: '西藏自治区', lat: 29.6500, lon: 91.1000, level: 'province' },
+    { name: '陕西省', display_name: '陕西省', lat: 34.2656, lon: 108.9542, level: 'province' },
+    { name: '甘肃省', display_name: '甘肃省', lat: 36.0611, lon: 103.8343, level: 'province' },
+    { name: '青海省', display_name: '青海省', lat: 36.6171, lon: 101.7782, level: 'province' },
+    { name: '宁夏回族自治区', display_name: '宁夏回族自治区', lat: 38.4872, lon: 106.2309, level: 'province' },
+    { name: '新疆维吾尔自治区', display_name: '新疆维吾尔自治区', lat: 43.7930, lon: 87.6270, level: 'province' },
+    { name: '台湾省', display_name: '台湾省', lat: 25.0330, lon: 121.5654, level: 'province' },
+    { name: '香港特别行政区', display_name: '香港特别行政区', lat: 22.3193, lon: 114.1694, level: 'province' },
+    { name: '澳门特别行政区', display_name: '澳门特别行政区', lat: 22.1987, lon: 113.5439, level: 'province' }
+  ]
+
+  const cityData = [
+    // 北京市
+    { name: '东城区', display_name: '北京市东城区', lat: 39.9286, lon: 116.4167 },
+    { name: '西城区', display_name: '北京市西城区', lat: 39.9153, lon: 116.3668 },
+    { name: '朝阳区', display_name: '北京市朝阳区', lat: 39.9214, lon: 116.4500 },
+    { name: '丰台区', display_name: '北京市丰台区', lat: 39.8586, lon: 116.2860 },
+    { name: '石景山区', display_name: '北京市石景山区', lat: 39.9073, lon: 116.2223 },
+    { name: '海淀区', display_name: '北京市海淀区', lat: 39.9561, lon: 116.3108 },
+    { name: '门头沟区', display_name: '北京市门头沟区', lat: 39.9367, lon: 116.1014 },
+    { name: '房山区', display_name: '北京市房山区', lat: 39.7420, lon: 115.8930 },
+    { name: '通州区', display_name: '北京市通州区', lat: 39.9075, lon: 116.6565 },
+    { name: '顺义区', display_name: '北京市顺义区', lat: 40.1285, lon: 116.6537 },
+    { name: '昌平区', display_name: '北京市昌平区', lat: 40.2181, lon: 116.2354 },
+    { name: '大兴区', display_name: '北京市大兴区', lat: 39.7289, lon: 116.3417 },
+    { name: '怀柔区', display_name: '北京市怀柔区', lat: 40.3240, lon: 116.6566 },
+    { name: '平谷区', display_name: '北京市平谷区', lat: 40.1408, lon: 117.1124 },
+    { name: '密云区', display_name: '北京市密云区', lat: 40.3774, lon: 116.8433 },
+    { name: '延庆区', display_name: '北京市延庆区', lat: 40.4630, lon: 115.9747 },
+    // 上海市
+    { name: '黄浦区', display_name: '上海市黄浦区', lat: 31.2223, lon: 121.4901 },
+    { name: '徐汇区', display_name: '上海市徐汇区', lat: 31.1885, lon: 121.4370 },
+    { name: '长宁区', display_name: '上海市长宁区', lat: 31.2209, lon: 121.4246 },
+    { name: '静安区', display_name: '上海市静安区', lat: 31.2304, lon: 121.4617 },
+    { name: '普陀区', display_name: '上海市普陀区', lat: 31.2415, lon: 121.3965 },
+    { name: '虹口区', display_name: '上海市虹口区', lat: 31.2611, lon: 121.5096 },
+    { name: '杨浦区', display_name: '上海市杨浦区', lat: 31.2599, lon: 121.5254 },
+    { name: '闵行区', display_name: '上海市闵行区', lat: 31.1120, lon: 121.3759 },
+    { name: '宝山区', display_name: '上海市宝山区', lat: 31.4053, lon: 121.4894 },
+    { name: '嘉定区', display_name: '上海市嘉定区', lat: 31.3810, lon: 121.2656 },
+    { name: '浦东新区', display_name: '上海市浦东新区', lat: 31.2304, lon: 121.5437 },
+    { name: '金山区', display_name: '上海市金山区', lat: 30.7427, lon: 121.3410 },
+    { name: '松江区', display_name: '上海市松江区', lat: 31.0307, lon: 121.2265 },
+    { name: '青浦区', display_name: '上海市青浦区', lat: 31.1510, lon: 121.1242 },
+    { name: '奉贤区', display_name: '上海市奉贤区', lat: 30.9124, lon: 121.4741 },
+    { name: '崇明区', display_name: '上海市崇明区', lat: 31.6229, lon: 121.3976 },
+    // 广东省 - 广州市
+    { name: '荔湾区', display_name: '广州市荔湾区', lat: 23.1288, lon: 113.2430 },
+    { name: '越秀区', display_name: '广州市越秀区', lat: 23.1296, lon: 113.2644 },
+    { name: '海珠区', display_name: '广州市海珠区', lat: 23.0833, lon: 113.3170 },
+    { name: '天河区', display_name: '广州市天河区', lat: 23.1187, lon: 113.3616 },
+    { name: '白云区', display_name: '广州市白云区', lat: 23.1623, lon: 113.2620 },
+    { name: '黄埔区', display_name: '广州市黄埔区', lat: 23.1033, lon: 113.4508 },
+    { name: '番禺区', display_name: '广州市番禺区', lat: 22.9133, lon: 113.3631 },
+    { name: '花都区', display_name: '广州市花都区', lat: 23.3922, lon: 113.2208 },
+    { name: '南沙区', display_name: '广州市南沙区', lat: 22.8017, lon: 113.5246 },
+    { name: '从化区', display_name: '广州市从化区', lat: 23.5459, lon: 113.5817 },
+    { name: '增城区', display_name: '广州市增城区', lat: 23.2658, lon: 113.8283 },
+    // 广东省 - 深圳市
+    { name: '罗湖区', display_name: '深圳市罗湖区', lat: 22.5480, lon: 114.1290 },
+    { name: '福田区', display_name: '深圳市福田区', lat: 22.5431, lon: 114.0629 },
+    { name: '南山区', display_name: '深圳市南山区', lat: 22.5313, lon: 113.9295 },
+    { name: '宝安区', display_name: '深圳市宝安区', lat: 22.5540, lon: 113.8833 },
+    { name: '龙岗区', display_name: '深圳市龙岗区', lat: 22.7218, lon: 114.2518 },
+    { name: '盐田区', display_name: '深圳市盐田区', lat: 22.5578, lon: 114.2361 },
+    { name: '龙华区', display_name: '深圳市龙华区', lat: 22.7013, lon: 114.0453 },
+    { name: '坪山区', display_name: '深圳市坪山区', lat: 22.6892, lon: 114.3494 },
+    { name: '光明区', display_name: '深圳市光明区', lat: 22.7847, lon: 113.9292 },
+    // 浙江省 - 杭州市
+    { name: '上城区', display_name: '杭州市上城区', lat: 30.2486, lon: 120.1690 },
+    { name: '下城区', display_name: '杭州市下城区', lat: 30.2918, lon: 120.1752 },
+    { name: '西湖区', display_name: '杭州市西湖区', lat: 30.2596, lon: 120.1303 },
+    { name: '拱墅区', display_name: '杭州市拱墅区', lat: 30.3193, lon: 120.1290 },
+    { name: '滨江区', display_name: '杭州市滨江区', lat: 30.2086, lon: 120.2106 },
+    { name: '萧山区', display_name: '杭州市萧山区', lat: 30.1600, lon: 120.2550 },
+    { name: '余杭区', display_name: '杭州市余杭区', lat: 30.2966, lon: 119.9968 },
+    { name: '富阳区', display_name: '杭州市富阳区', lat: 30.0475, lon: 119.9550 },
+    { name: '临安区', display_name: '杭州市临安区', lat: 30.2330, lon: 119.7250 },
+    { name: '桐庐县', display_name: '杭州市桐庐县', lat: 29.7977, lon: 119.6837 },
+    { name: '淳安县', display_name: '杭州市淳安县', lat: 29.6050, lon: 118.8897 },
+    // 四川省 - 成都市
+    { name: '锦江区', display_name: '成都市锦江区', lat: 30.6302, lon: 104.0833 },
+    { name: '青羊区', display_name: '成都市青羊区', lat: 30.6858, lon: 104.0556 },
+    { name: '金牛区', display_name: '成都市金牛区', lat: 30.6918, lon: 104.0438 },
+    { name: '武侯区', display_name: '成都市武侯区', lat: 30.6429, lon: 104.0433 },
+    { name: '成华区', display_name: '成都市成华区', lat: 30.6608, lon: 104.1036 },
+    { name: '龙泉驿区', display_name: '成都市龙泉驿区', lat: 30.5706, lon: 104.2697 },
+    { name: '青白江区', display_name: '成都市青白江区', lat: 30.8852, lon: 104.2530 },
+    { name: '新都区', display_name: '成都市新都区', lat: 30.8242, lon: 104.1573 },
+    { name: '温江区', display_name: '成都市温江区', lat: 30.6800, lon: 103.8418 },
+    { name: '双流区', display_name: '成都市双流区', lat: 30.4242, lon: 103.9237 },
+    { name: '郫都区', display_name: '成都市郫都区', lat: 30.7958, lon: 103.8863 },
+    { name: '金堂县', display_name: '成都市金堂县', lat: 30.2863, lon: 104.4113 },
+    { name: '大邑县', display_name: '成都市大邑县', lat: 30.5058, lon: 103.5223 },
+    { name: '蒲江县', display_name: '成都市蒲江县', lat: 30.1922, lon: 103.5086 },
+    { name: '新津区', display_name: '成都市新津区', lat: 30.4117, lon: 103.8183 },
+    { name: '都江堰市', display_name: '成都市都江堰市', lat: 30.9897, lon: 103.6380 },
+    { name: '彭州市', display_name: '成都市彭州市', lat: 30.9877, lon: 103.9410 },
+    { name: '邛崃市', display_name: '成都市邛崃市', lat: 30.4100, lon: 103.4610 },
+    { name: '崇州市', display_name: '成都市崇州市', lat: 30.6318, lon: 103.6713 },
+    { name: '简阳市', display_name: '成都市简阳市', lat: 30.3787, lon: 104.5477 },
+    // 江苏省 - 南京市
+    { name: '玄武区', display_name: '南京市玄武区', lat: 32.0603, lon: 118.7969 },
+    { name: '秦淮区', display_name: '南京市秦淮区', lat: 32.0044, lon: 118.7894 },
+    { name: '建邺区', display_name: '南京市建邺区', lat: 32.0043, lon: 118.7180 },
+    { name: '鼓楼区', display_name: '南京市鼓楼区', lat: 32.0660, lon: 118.7690 },
+    { name: '浦口区', display_name: '南京市浦口区', lat: 32.0593, lon: 118.6283 },
+    { name: '栖霞区', display_name: '南京市栖霞区', lat: 32.1176, lon: 118.8853 },
+    { name: '雨花台区', display_name: '南京市雨花台区', lat: 31.9912, lon: 118.7798 },
+    { name: '江宁区', display_name: '南京市江宁区', lat: 31.9559, lon: 118.8620 },
+    { name: '六合区', display_name: '南京市六合区', lat: 32.3433, lon: 118.8300 },
+    { name: '溧水区', display_name: '南京市溧水区', lat: 31.6510, lon: 119.0280 },
+    { name: '高淳区', display_name: '南京市高淳区', lat: 31.3270, lon: 118.8770 },
+    // 江苏省 - 苏州市
+    { name: '虎丘区', display_name: '苏州市虎丘区', lat: 31.2990, lon: 120.4344 },
+    { name: '吴中区', display_name: '苏州市吴中区', lat: 31.2628, lon: 120.4556 },
+    { name: '相城区', display_name: '苏州市相城区', lat: 31.4175, lon: 120.6422 },
+    { name: '姑苏区', display_name: '苏州市姑苏区', lat: 31.3232, lon: 120.6019 },
+    { name: '吴江区', display_name: '苏州市吴江区', lat: 31.1438, lon: 120.6420 },
+    { name: '常熟市', display_name: '苏州市常熟市', lat: 31.6538, lon: 120.7528 },
+    { name: '张家港市', display_name: '苏州市张家港市', lat: 31.8756, lon: 120.5547 },
+    { name: '昆山市', display_name: '苏州市昆山市', lat: 31.3846, lon: 120.9580 },
+    { name: '太仓市', display_name: '苏州市太仓市', lat: 31.4577, lon: 121.1306 },
+    // 湖北省 - 武汉市
+    { name: '江岸区', display_name: '武汉市江岸区', lat: 30.6054, lon: 114.3055 },
+    { name: '江汉区', display_name: '武汉市江汉区', lat: 30.6018, lon: 114.2712 },
+    { name: '硚口区', display_name: '武汉市硚口区', lat: 30.5924, lon: 114.2684 },
+    { name: '汉阳区', display_name: '武汉市汉阳区', lat: 30.5498, lon: 114.2036 },
+    { name: '武昌区', display_name: '武汉市武昌区', lat: 30.5482, lon: 114.3155 },
+    { name: '青山区', display_name: '武汉市青山区', lat: 30.6364, lon: 114.3996 },
+    { name: '洪山区', display_name: '武汉市洪山区', lat: 30.5008, lon: 114.3057 },
+    { name: '东西湖区', display_name: '武汉市东西湖区', lat: 30.6195, lon: 114.0330 },
+    { name: '汉南区', display_name: '武汉市汉南区', lat: 30.3088, lon: 114.0847 },
+    { name: '蔡甸区', display_name: '武汉市蔡甸区', lat: 30.5820, lon: 113.9620 },
+    { name: '江夏区', display_name: '武汉市江夏区', lat: 30.3494, lon: 114.3136 },
+    { name: '黄陂区', display_name: '武汉市黄陂区', lat: 30.8843, lon: 114.3767 },
+    { name: '新洲区', display_name: '武汉市新洲区', lat: 30.7922, lon: 114.7947 },
+    // 山东省 - 青岛市
+    { name: '市南区', display_name: '青岛市市南区', lat: 36.0660, lon: 120.3929 },
+    { name: '市北区', display_name: '青岛市市北区', lat: 36.0878, lon: 120.3620 },
+    { name: '黄岛区', display_name: '青岛市黄岛区', lat: 35.8693, lon: 120.1840 },
+    { name: '崂山区', display_name: '青岛市崂山区', lat: 36.1078, lon: 120.4633 },
+    { name: '李沧区', display_name: '青岛市李沧区', lat: 36.1428, lon: 120.4296 },
+    { name: '城阳区', display_name: '青岛市城阳区', lat: 36.3072, lon: 120.3926 },
+    { name: '胶州市', display_name: '青岛市胶州市', lat: 36.2837, lon: 120.0336 },
+    { name: '即墨区', display_name: '青岛市即墨区', lat: 36.3907, lon: 120.4470 },
+    { name: '平度市', display_name: '青岛市平度市', lat: 36.7863, lon: 119.9653 },
+    { name: '莱西市', display_name: '青岛市莱西市', lat: 36.8858, lon: 120.5170 },
+    // 陕西省 - 西安市
+    { name: '新城区', display_name: '西安市新城区', lat: 34.2653, lon: 108.9542 },
+    { name: '碑林区', display_name: '西安市碑林区', lat: 34.2405, lon: 108.9403 },
+    { name: '莲湖区', display_name: '西安市莲湖区', lat: 34.2660, lon: 108.9293 },
+    { name: '灞桥区', display_name: '西安市灞桥区', lat: 34.2758, lon: 109.0603 },
+    { name: '未央区', display_name: '西安市未央区', lat: 34.2908, lon: 108.9383 },
+    { name: '雁塔区', display_name: '西安市雁塔区', lat: 34.2133, lon: 108.9453 },
+    { name: '阎良区', display_name: '西安市阎良区', lat: 34.6538, lon: 109.2283 },
+    { name: '临潼区', display_name: '西安市临潼区', lat: 34.3660, lon: 109.2200 },
+    { name: '长安区', display_name: '西安市长安区', lat: 34.0870, lon: 108.9390 },
+    { name: '高陵区', display_name: '西安市高陵区', lat: 34.5330, lon: 109.0880 },
+    { name: '鄠邑区', display_name: '西安市鄠邑区', lat: 34.1080, lon: 108.6030 },
+    { name: '蓝田县', display_name: '西安市蓝田县', lat: 34.1520, lon: 109.3250 },
+    { name: '周至县', display_name: '西安市周至县', lat: 34.0620, lon: 108.2000 },
+    // 河南省 - 郑州市
+    { name: '中原区', display_name: '郑州市中原区', lat: 34.7466, lon: 113.5230 },
+    { name: '二七区', display_name: '郑州市二七区', lat: 34.7388, lon: 113.6320 },
+    { name: '管城回族区', display_name: '郑州市管城回族区', lat: 34.7510, lon: 113.6730 },
+    { name: '金水区', display_name: '郑州市金水区', lat: 34.8000, lon: 113.6170 },
+    { name: '上街区', display_name: '郑州市上街区', lat: 34.8170, lon: 113.3080 },
+    { name: '惠济区', display_name: '郑州市惠济区', lat: 34.8670, lon: 113.6170 },
+    { name: '中牟县', display_name: '郑州市中牟县', lat: 34.7170, lon: 113.9750 },
+    { name: '巩义市', display_name: '郑州市巩义市', lat: 34.7680, lon: 112.9830 },
+    { name: '荥阳市', display_name: '郑州市荥阳市', lat: 34.7870, lon: 113.3830 },
+    { name: '新密市', display_name: '郑州市新密市', lat: 34.5390, lon: 113.3920 },
+    { name: '新郑市', display_name: '郑州市新郑市', lat: 34.3960, lon: 113.7390 },
+    { name: '登封市', display_name: '郑州市登封市', lat: 34.4530, lon: 113.0500 },
+    // 重庆市
+    { name: '万州区', display_name: '重庆市万州区', lat: 30.8078, lon: 108.4087 },
+    { name: '渝中区', display_name: '重庆市渝中区', lat: 29.5517, lon: 106.5625 },
+    { name: '江北区', display_name: '重庆市江北区', lat: 29.6080, lon: 106.5743 },
+    { name: '沙坪坝区', display_name: '重庆市沙坪坝区', lat: 29.5422, lon: 106.4572 },
+    { name: '九龙坡区', display_name: '重庆市九龙坡区', lat: 29.5037, lon: 106.4807 },
+    { name: '南岸区', display_name: '重庆市南岸区', lat: 29.5360, lon: 106.6440 },
+    { name: '北碚区', display_name: '重庆市北碚区', lat: 29.8250, lon: 106.3900 },
+    { name: '渝北区', display_name: '重庆市渝北区', lat: 29.7183, lon: 106.6333 },
+    { name: '巴南区', display_name: '重庆市巴南区', lat: 29.4030, lon: 106.5190 },
+    { name: '涪陵区', display_name: '重庆市涪陵区', lat: 29.7030, lon: 107.3940 },
+    { name: '长寿区', display_name: '重庆市长寿区', lat: 29.8570, lon: 107.0810 },
+    { name: '璧山区', display_name: '重庆市璧山区', lat: 29.5930, lon: 106.2270 },
+    { name: '开州区', display_name: '重庆市开州区', lat: 31.1600, lon: 108.3930 },
+    { name: '梁平区', display_name: '重庆市梁平区', lat: 30.6720, lon: 107.8000 },
+    { name: '云阳县', display_name: '重庆市云阳县', lat: 30.9890, lon: 108.6970 },
+    // 省级城市（直辖市和特别行政区）
+    { name: '深圳市', display_name: '深圳市', lat: 22.5431, lon: 114.0629 },
+    { name: '成都市', display_name: '成都市', lat: 30.5728, lon: 104.0668 },
+    { name: '杭州市', display_name: '杭州市', lat: 30.2873, lon: 120.1536 },
+    { name: '广州市', display_name: '广州市', lat: 23.1291, lon: 113.2644 },
+    { name: '南京市', display_name: '南京市', lat: 32.0603, lon: 118.7969 },
+    { name: '武汉市', display_name: '武汉市', lat: 30.5928, lon: 114.3055 },
+    { name: '西安市', display_name: '西安市', lat: 34.2656, lon: 108.9542 },
+    { name: '青岛市', display_name: '青岛市', lat: 36.0671, lon: 120.3826 },
+    { name: '郑州市', display_name: '郑州市', lat: 34.7466, lon: 113.5230 },
+    { name: '苏州市', display_name: '苏州市', lat: 31.2990, lon: 120.4344 },
+  ]
+
+  // 插入省份
+  const provinceMap = {}
+  provinces.forEach(p => {
+    db.run("INSERT INTO cities (name, display_name, level, lat, lon, country) VALUES (?, ?, ?, ?, ?, ?)",
+      [p.name, p.display_name, p.level, p.lat, p.lon, p.country || '中国'])
+    const result = db.exec("SELECT last_insert_rowid()")
+    provinceMap[p.name] = result[0]?.values[0][0]
+  })
+
+  // 插入城市和区县
+  cityData.forEach(c => {
+    db.run("INSERT INTO cities (name, display_name, level, lat, lon, country) VALUES (?, ?, ?, ?, ?, ?)",
+      [c.name, c.display_name, 'district', c.lat, c.lon, '中国'])
   })
 }
 
@@ -306,17 +594,22 @@ function runQuery(sql, params = []) {
 
 // Projects
 ipcMain.handle('db:projects:getAll', () => {
-  return queryAll('SELECT * FROM projects ORDER BY created_at DESC')
+  return queryAll(`
+    SELECT p.*, c.display_name as city_name, c.lat, c.lon
+    FROM projects p
+    LEFT JOIN cities c ON p.city_id = c.id
+    ORDER BY p.created_at DESC
+  `)
 })
 
 ipcMain.handle('db:projects:create', (_, data) => {
-  return runQuery('INSERT INTO projects (name, code, status) VALUES (?, ?, ?)',
-    [data.name, data.code, data.status || '进行中'])
+  return runQuery('INSERT INTO projects (name, code, city_id, location, status, manager, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [data.name, data.code, data.city_id || null, data.location || '', data.status || '进行中', data.manager || '', data.start_date || null, data.end_date || null])
 })
 
 ipcMain.handle('db:projects:update', (_, data) => {
-  runQuery('UPDATE projects SET name = ?, code = ?, status = ? WHERE id = ?',
-    [data.name, data.code, data.status, data.id])
+  runQuery('UPDATE projects SET name = ?, code = ?, city_id = ?, location = ?, status = ?, manager = ?, start_date = ?, end_date = ? WHERE id = ?',
+    [data.name, data.code, data.city_id || null, data.location || '', data.status, data.manager || '', data.start_date || null, data.end_date || null, data.id])
   return data
 })
 
@@ -448,4 +741,19 @@ ipcMain.handle('db:people:update', (_, data) => {
 ipcMain.handle('db:people:delete', (_, id) => {
   runQuery('DELETE FROM people WHERE id = ?', [id])
   return { success: true }
+})
+
+// Cities
+ipcMain.handle('db:cities:getAll', () => {
+  return queryAll('SELECT * FROM cities ORDER BY level, name')
+})
+
+ipcMain.handle('db:cities:search', (_, keyword) => {
+  return queryAll('SELECT * FROM cities WHERE name LIKE ? OR display_name LIKE ? ORDER BY level, name LIMIT 50',
+    [`%${keyword}%`, `%${keyword}%`])
+})
+
+ipcMain.handle('db:cities:getById', (_, id) => {
+  const result = queryAll('SELECT * FROM cities WHERE id = ?', [id])
+  return result.length > 0 ? result[0] : null
 })
