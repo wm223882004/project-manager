@@ -141,13 +141,35 @@ function seedData() {
     })
   }
 
-  // 项目数据 - 使用city_id
+  // 20个项目数据 - 覆盖各种情况
   const projects = [
+    // 进行中项目 (8个)
     { code: 'PRJ2024001', name: '北京大兴国际机场智慧园区项目', city_name: '大兴区', start_date: '2024-01-15', end_date: '2025-06-30', status: '进行中', manager: '张伟' },
     { code: 'PRJ2024002', name: '上海自贸区数据中心建设', city_name: '浦东新区', start_date: '2024-03-01', end_date: '2025-03-01', status: '进行中', manager: '李娜' },
-    { code: 'PRJ2023001', name: '深圳地铁14号线智能化系统', city_name: '深圳市', start_date: '2023-06-01', end_date: '2024-12-31', status: '已完成', manager: '王强' },
-    { code: 'PRJ2024003', name: '成都天府国际机场配套工程', city_name: '成都市', start_date: '2024-02-01', end_date: '2026-12-31', status: '已延期', manager: '刘洋' },
-    { code: 'PRJ2024004', name: '杭州亚运会场馆智能化改造', city_name: '杭州市', start_date: '2024-04-01', end_date: '2025-08-31', status: '已暂停', manager: '陈明' }
+    { code: 'PRJ2024005', name: '广州南沙港智能化物流系统', city_name: '广州市', start_date: '2024-05-01', end_date: '2026-02-28', status: '进行中', manager: '王强' },
+    { code: 'PRJ2024006', name: '武汉光谷云计算中心', city_name: '武汉市', start_date: '2024-02-15', end_date: '2025-08-15', status: '进行中', manager: '刘洋' },
+    { code: 'PRJ2024007', name: '西安航天城指挥系统', city_name: '西安市', start_date: '2024-06-01', end_date: '2025-12-31', status: '进行中', manager: '陈明' },
+    { code: 'PRJ2024008', name: '南京软件谷智慧园区', city_name: '南京市', start_date: '2024-04-15', end_date: '2025-10-30', status: '进行中', manager: '赵雪' },
+    { code: 'PRJ2024009', name: '苏州工业园区智能制造项目', city_name: '苏州市', start_date: '2024-03-20', end_date: '2025-09-20', status: '进行中', manager: '孙浩' },
+    { code: 'PRJ2024010', name: '青岛港自动化码头系统', city_name: '青岛市', start_date: '2024-07-01', end_date: '2026-01-15', status: '进行中', manager: '周婷' },
+
+    // 已完成项目 (5个)
+    { code: 'PRJ2023001', name: '深圳地铁14号线智能化系统', city_name: '深圳市', start_date: '2023-06-01', end_date: '2024-06-30', status: '已完成', manager: '王强' },
+    { code: 'PRJ2023002', name: '成都天府国际机场配套工程', city_name: '成都市', start_date: '2023-03-01', end_date: '2024-03-01', status: '已完成', manager: '刘洋' },
+    { code: 'PRJ2023003', name: '杭州亚运会场馆智能化改造', city_name: '杭州市', start_date: '2023-01-01', end_date: '2024-01-01', status: '已完成', manager: '陈明' },
+    { code: 'PRJ2023004', name: '重庆两江新区数据中心', city_name: '重庆市', start_date: '2023-05-01', end_date: '2024-05-31', status: '已完成', manager: '张伟' },
+    { code: 'PRJ2023005', name: '天津滨海新区智能交通', city_name: '天津市', start_date: '2023-04-01', end_date: '2024-04-30', status: '已完成', manager: '李娜' },
+
+    // 已暂停项目 (3个)
+    { code: 'PRJ2024011', name: '郑州智慧城市大脑项目', city_name: '郑州市', start_date: '2024-08-01', end_date: '2026-06-30', status: '已暂停', manager: '赵雪' },
+    { code: 'PRJ2024012', name: '长沙智能电网示范项目', city_name: '长沙市', start_date: '2024-05-15', end_date: '2025-11-15', status: '已暂停', manager: '孙浩' },
+    { code: 'PRJ2024013', name: '福州数字政务平台', city_name: '福州市', start_date: '2024-06-01', end_date: '2025-12-31', status: '已暂停', manager: '周婷' },
+
+    // 已延期项目 (4个)
+    { code: 'PRJ2024014', name: '厦门海港智慧物流园', city_name: '厦门市', start_date: '2024-01-01', end_date: '2025-06-30', status: '已延期', manager: '王强' },
+    { code: 'PRJ2024015', name: '昆明长水机场扩建智能化', city_name: '昆明市', start_date: '2024-02-01', end_date: '2025-08-31', status: '已延期', manager: '刘洋' },
+    { code: 'PRJ2024016', name: '哈尔滨新区智慧管廊', city_name: '哈尔滨市', start_date: '2024-03-15', end_date: '2025-09-30', status: '已延期', manager: '陈明' },
+    { code: 'PRJ2024017', name: '沈阳工业互联网平台', city_name: '沈阳市', start_date: '2024-04-01', end_date: '2025-10-31', status: '已延期', manager: '赵雪' }
   ]
 
   projects.forEach(p => {
@@ -157,27 +179,135 @@ function seedData() {
       [p.code, p.name, city_id, location, p.start_date, p.end_date, p.status, p.manager])
   })
 
-  // 合同数据
+  // 合同数据 - 17个项目有合同，3个项目无合同(PRJ2024010,PRJ2024016,PRJ2024017)
   const contracts = [
+    // 项目1 - 3个合同
     { project_id: 1, name: '智慧园区系统采购合同', contract_type: '采购合同', amount: 28000000, signed_date: '2024-01-20' },
-    { project_id: 1, name: '网络基础设施建设合同', contract_type: '采购合同', amount: 15000000, signed_date: '2024-02-15' },
+    { project_id: 1, name: '网络基础设施建设合同', contract_type: '施工合同', amount: 15000000, signed_date: '2024-02-15' },
+    { project_id: 1, name: '软件平台开发合同', contract_type: '服务合同', amount: 8000000, signed_date: '2024-03-10' },
+
+    // 项目2 - 2个合同
     { project_id: 2, name: '数据中心设备采购合同', contract_type: '采购合同', amount: 45000000, signed_date: '2024-03-10' },
-    { project_id: 3, name: '信号系统采购安装合同', contract_type: '采购合同', amount: 32000000, signed_date: '2023-06-15' },
-    { project_id: 4, name: '机场配套设施建设合同', contract_type: '销售合同', amount: 68000000, signed_date: '2024-02-20' }
+    { project_id: 2, name: '机房装修合同', contract_type: '施工合同', amount: 12000000, signed_date: '2024-03-25' },
+
+    // 项目3 - 2个合同
+    { project_id: 3, name: '物流系统设备采购', contract_type: '采购合同', amount: 22000000, signed_date: '2024-05-15' },
+    { project_id: 3, name: '系统集成合同', contract_type: '服务合同', amount: 6000000, signed_date: '2024-06-01' },
+
+    // 项目4 - 1个合同
+    { project_id: 4, name: '云计算中心建设合同', contract_type: '施工合同', amount: 35000000, signed_date: '2024-02-20' },
+
+    // 项目5 - 2个合同
+    { project_id: 5, name: '指挥系统设备合同', contract_type: '采购合同', amount: 18000000, signed_date: '2024-06-15' },
+    { project_id: 5, name: '软件授权合同', contract_type: '服务合同', amount: 5000000, signed_date: '2024-06-20' },
+
+    // 项目6 - 1个合同
+    { project_id: 6, name: '智慧园区总包合同', contract_type: '施工合同', amount: 28000000, signed_date: '2024-04-20' },
+
+    // 项目7 - 2个合同
+    { project_id: 7, name: '智能制造设备采购', contract_type: '采购合同', amount: 20000000, signed_date: '2024-03-25' },
+    { project_id: 7, name: 'MES系统开发合同', contract_type: '服务合同', amount: 7500000, signed_date: '2024-04-10' },
+
+    // 项目8 - 无合同
+    // 项目9 (已完成) - 2个合同
+    { project_id: 9, name: '信号系统采购安装合同', contract_type: '采购合同', amount: 32000000, signed_date: '2023-06-15' },
+    { project_id: 9, name: '系统维护合同', contract_type: '服务合同', amount: 4000000, signed_date: '2023-07-01' },
+
+    // 项目10 (已完成) - 1个合同
+    { project_id: 10, name: '机场配套设施合同', contract_type: '施工合同', amount: 55000000, signed_date: '2023-03-15' },
+
+    // 项目11 (已完成) - 2个合同
+    { project_id: 11, name: '场馆改造设备采购', contract_type: '采购合同', amount: 15000000, signed_date: '2023-01-15' },
+    { project_id: 11, name: '系统调试合同', contract_type: '服务合同', amount: 3000000, signed_date: '2023-02-01' },
+
+    // 项目12 (已完成) - 1个合同
+    { project_id: 12, name: '数据中心建设合同', contract_type: '施工合同', amount: 40000000, signed_date: '2023-05-10' },
+
+    // 项目13 (已完成) - 1个合同
+    { project_id: 13, name: '智能交通系统合同', contract_type: '采购合同', amount: 25000000, signed_date: '2023-04-15' },
+
+    // 项目14 (已暂停) - 2个合同
+    { project_id: 14, name: '城市大脑平台合同', contract_type: '服务合同', amount: 30000000, signed_date: '2024-08-15' },
+    { project_id: 14, name: '硬件设备采购', contract_type: '采购合同', amount: 18000000, signed_date: '2024-08-20' },
+
+    // 项目15 (已暂停) - 1个合同
+    { project_id: 15, name: '智能电网设备合同', contract_type: '采购合同', amount: 22000000, signed_date: '2024-05-20' },
+
+    // 项目16 (已暂停) - 无合同
+
+    // 项目17 (已延期) - 1个合同
+    { project_id: 17, name: '智慧物流系统合同', contract_type: '采购合同', amount: 19000000, signed_date: '2024-01-10' },
+
+    // 项目18 (已延期) - 无合同
+    // 项目19 (已延期) - 无合同
+    // 项目20 (已延期) - 无合同
   ]
 
   contracts.forEach(c => {
     db.run("INSERT INTO contracts (project_id, name, contract_type, amount, signed_date) VALUES (?, ?, ?, ?, ?)",
-      [c.project_id, c.name, c.contract_type || '销售合同', c.amount, c.signed_date])
+      [c.project_id, c.name, c.contract_type, c.amount, c.signed_date])
   })
 
-  // 发票数据
+  // 发票数据 - 覆盖各种情况：有凭证/无凭证
   const invoices = [
-    { contract_id: 1, invoice_no: 'INV20240001', amount: 8000000, date: '2024-02-28' },
-    { contract_id: 1, invoice_no: 'INV20240002', amount: 10000000, date: '2024-04-15' },
-    { contract_id: 2, invoice_no: 'INV20240003', amount: 15000000, date: '2024-03-20' },
-    { contract_id: 3, invoice_no: 'INV20240004', amount: 22000000, date: '2024-05-10' },
-    { contract_id: 4, invoice_no: 'INV20230001', amount: 32000000, date: '2023-08-15' }
+    // 项目1的发票 - 全部有凭证
+    { contract_id: 1, invoice_no: 'INV20240001', amount: 10000000, date: '2024-02-28' },
+    { contract_id: 1, invoice_no: 'INV20240002', amount: 8000000, date: '2024-04-15' },
+    { contract_id: 1, invoice_no: 'INV20240003', amount: 10000000, date: '2024-06-20' },
+
+    // 项目2的发票 - 全部有凭证
+    { contract_id: 2, invoice_no: 'INV20240004', amount: 20000000, date: '2024-04-10' },
+    { contract_id: 2, invoice_no: 'INV20240005', amount: 15000000, date: '2024-05-15' },
+    { contract_id: 2, invoice_no: 'INV20240006', amount: 10000000, date: '2024-06-25' },
+
+    // 项目3的发票 - 部分有凭证
+    { contract_id: 3, invoice_no: 'INV20240007', amount: 12000000, date: '2024-07-01' },
+    { contract_id: 3, invoice_no: 'INV20240008', amount: 10000000, date: '2024-08-15' },
+
+    // 项目4的发票 - 全部无凭证
+    { contract_id: 4, invoice_no: 'INV20240009', amount: 35000000, date: '2024-03-15' },
+
+    // 项目5的发票 - 全部有凭证
+    { contract_id: 5, invoice_no: 'INV20240010', amount: 12000000, date: '2024-07-10' },
+    { contract_id: 5, invoice_no: 'INV20240011', amount: 6000000, date: '2024-08-05' },
+
+    // 项目6的发票 - 部分有凭证
+    { contract_id: 6, invoice_no: 'INV20240012', amount: 15000000, date: '2024-05-20' },
+    { contract_id: 6, invoice_no: 'INV20240013', amount: 13000000, date: '2024-07-30' },
+
+    // 项目7的发票 - 全部有凭证
+    { contract_id: 7, invoice_no: 'INV20240014', amount: 10000000, date: '2024-04-25' },
+    { contract_id: 7, invoice_no: 'INV20240015', amount: 10000000, date: '2024-06-15' },
+    { contract_id: 7, invoice_no: 'INV20240016', amount: 7500000, date: '2024-08-20' },
+
+    // 项目9(已完成)的发票 - 全部有凭证
+    { contract_id: 9, invoice_no: 'INV20230001', amount: 15000000, date: '2023-08-15' },
+    { contract_id: 9, invoice_no: 'INV20230002', amount: 17000000, date: '2023-10-20' },
+
+    // 项目10(已完成)的发票 - 全部有凭证
+    { contract_id: 10, invoice_no: 'INV20230003', amount: 28000000, date: '2023-05-20' },
+    { contract_id: 10, invoice_no: 'INV20230004', amount: 27000000, date: '2023-07-25' },
+
+    // 项目11(已完成)的发票 - 全部有凭证
+    { contract_id: 11, invoice_no: 'INV20230005', amount: 8000000, date: '2023-03-15' },
+    { contract_id: 11, invoice_no: 'INV20230006', amount: 7000000, date: '2023-05-10' },
+
+    // 项目12(已完成)的发票 - 部分无凭证
+    { contract_id: 12, invoice_no: 'INV20230007', amount: 20000000, date: '2023-06-15' },
+    { contract_id: 12, invoice_no: 'INV20230008', amount: 20000000, date: '2023-09-20' },
+
+    // 项目13(已完成)的发票 - 全部有凭证
+    { contract_id: 13, invoice_no: 'INV20230009', amount: 25000000, date: '2023-05-20' },
+
+    // 项目14(已暂停)的发票 - 全部无凭证
+    { contract_id: 14, invoice_no: 'INV20240101', amount: 15000000, date: '2024-09-10' },
+    { contract_id: 14, invoice_no: 'INV20240102', amount: 15000000, date: '2024-10-15' },
+
+    // 项目15(已暂停)的发票 - 部分有凭证
+    { contract_id: 15, invoice_no: 'INV20240103', amount: 22000000, date: '2024-06-20' },
+
+    // 项目17(已延期)的发票 - 部分无凭证
+    { contract_id: 17, invoice_no: 'INV20240104', amount: 19000000, date: '2024-02-15' },
   ]
 
   invoices.forEach(i => {
@@ -185,13 +315,53 @@ function seedData() {
       [i.contract_id, i.invoice_no, i.amount, i.date])
   })
 
-  // 付款凭证数据
+  // 付款凭证数据 - 部分发票有凭证，部分无
   const payments = [
-    { invoice_id: 1, amount: 8000000, date: '2024-03-15', receipt_no: 'PAY20240315001' },
-    { invoice_id: 2, amount: 10000000, date: '2024-05-20', receipt_no: 'PAY20240520001' },
-    { invoice_id: 3, amount: 15000000, date: '2024-04-10', receipt_no: 'PAY20240410001' },
-    { invoice_id: 4, amount: 22000000, date: '2024-06-05', receipt_no: 'PAY20240605001' },
-    { invoice_id: 5, amount: 32000000, date: '2023-09-01', receipt_no: 'PAY20230901001' }
+    // 项目1的付款
+    { invoice_id: 1, amount: 10000000, date: '2024-03-15', receipt_no: 'PAY20240315001' },
+    { invoice_id: 2, amount: 8000000, date: '2024-05-20', receipt_no: 'PAY20240520001' },
+    { invoice_id: 3, amount: 10000000, date: '2024-07-25', receipt_no: 'PAY20240725001' },
+
+    // 项目2的付款
+    { invoice_id: 4, amount: 20000000, date: '2024-05-12', receipt_no: 'PAY20240512001' },
+    { invoice_id: 5, amount: 15000000, date: '2024-06-18', receipt_no: 'PAY20240618001' },
+    // 发票6无凭证
+
+    // 项目3的付款 - 只有部分有凭证
+    { invoice_id: 7, amount: 12000000, date: '2024-08-05', receipt_no: 'PAY20240805001' },
+    // 发票8无凭证
+
+    // 项目5的付款
+    { invoice_id: 10, amount: 12000000, date: '2024-08-12', receipt_no: 'PAY20240812001' },
+    { invoice_id: 11, amount: 6000000, date: '2024-09-08', receipt_no: 'PAY20240908001' },
+
+    // 项目6的付款 - 只有部分有凭证
+    { invoice_id: 12, amount: 15000000, date: '2024-06-22', receipt_no: 'PAY20240622001' },
+    // 发票13无凭证
+
+    // 项目7的付款
+    { invoice_id: 14, amount: 10000000, date: '2024-05-28', receipt_no: 'PAY20240528001' },
+    { invoice_id: 15, amount: 10000000, date: '2024-07-18', receipt_no: 'PAY20240718001' },
+    { invoice_id: 16, amount: 7500000, date: '2024-09-25', receipt_no: 'PAY20240925001' },
+
+    // 项目9的付款
+    { invoice_id: 17, amount: 15000000, date: '2023-09-10', receipt_no: 'PAY20230910001' },
+    { invoice_id: 18, amount: 17000000, date: '2023-11-22', receipt_no: 'PAY20231122001' },
+
+    // 项目10的付款
+    { invoice_id: 19, amount: 28000000, date: '2023-06-18', receipt_no: 'PAY20230618001' },
+    { invoice_id: 20, amount: 27000000, date: '2023-08-28', receipt_no: 'PAY20230828001' },
+
+    // 项目11的付款
+    { invoice_id: 21, amount: 8000000, date: '2023-04-18', receipt_no: 'PAY20230418001' },
+    { invoice_id: 22, amount: 7000000, date: '2023-06-12', receipt_no: 'PAY20230612001' },
+
+    // 项目12的付款 - 只有部分有凭证
+    { invoice_id: 23, amount: 20000000, date: '2023-07-20', receipt_no: 'PAY20230720001' },
+    // 发票24无凭证
+
+    // 项目13的付款
+    { invoice_id: 25, amount: 25000000, date: '2023-06-22', receipt_no: 'PAY20230622001' },
   ]
 
   payments.forEach(p => {
@@ -201,10 +371,34 @@ function seedData() {
 
   // 验收数据
   const acceptances = [
-    { project_id: 1, name: '园区网络基础设施验收', status: '待验收', date: '2024-12-31' },
+    // 项目1 - 待验收
+    { project_id: 1, name: '一期网络基础设施验收', status: '待验收', date: '2024-12-31' },
+    // 项目2 - 已验收
     { project_id: 2, name: '数据中心机房验收', status: '已验收', date: '2024-10-15' },
-    { project_id: 3, name: '信号系统初步验收', status: '已验收', date: '2024-06-30' },
-    { project_id: 4, name: '航站楼配套工程验收', status: '不通过', date: '2024-11-20' }
+    // 项目3 - 进行中无验收
+    // 项目4 - 进行中无验收
+    // 项目5 - 进行中无验收
+    // 项目6 - 进行中无验收
+    // 项目7 - 进行中无验收
+    // 项目8 - 进行中无验收
+    // 项目9(已完成) - 已验收
+    { project_id: 9, name: '信号系统验收', status: '已验收', date: '2024-06-30' },
+    // 项目10(已完成) - 已验收
+    { project_id: 10, name: '机场配套设施验收', status: '已验收', date: '2024-03-15' },
+    // 项目11(已完成) - 已验收
+    { project_id: 11, name: '场馆系统验收', status: '已验收', date: '2024-01-10' },
+    // 项目12(已完成) - 不通过
+    { project_id: 12, name: '数据中心验收', status: '不通过', date: '2024-05-20' },
+    // 项目13(已完成) - 已验收
+    { project_id: 13, name: '智能交通系统验收', status: '已验收', date: '2024-04-25' },
+    // 项目14(已暂停) - 待验收
+    { project_id: 14, name: '平台一期验收', status: '待验收', date: '2024-12-31' },
+    // 项目15(已暂停) - 待验收
+    { project_id: 15, name: '电网设备验收', status: '待验收', date: '2024-11-30' },
+    // 项目16(已暂停) - 无验收
+    // 项目17(已延期) - 待验收
+    { project_id: 17, name: '物流系统验收', status: '待验收', date: '2024-10-31' },
+    // 项目18-20 - 无验收
   ]
 
   acceptances.forEach(a => {
@@ -221,7 +415,9 @@ function seedData() {
     { name: '陈明', position: '质量经理', phone: '13800138005', email: 'chenming@company.com' },
     { name: '赵雪', position: '财务主管', phone: '13800138006', email: 'zhaoxue@company.com' },
     { name: '孙浩', position: '采购经理', phone: '13800138007', email: 'sunhao@company.com' },
-    { name: '周婷', position: '行政主管', phone: '13800138008', email: 'zhouting@company.com' }
+    { name: '周婷', position: '行政主管', phone: '13800138008', email: 'zhouting@company.com' },
+    { name: '吴刚', position: '系统架构师', phone: '13800138009', email: 'wugang@company.com' },
+    { name: '郑强', position: '运维经理', phone: '13800138010', email: 'zhengqiang@company.com' }
   ]
 
   people.forEach(p => {
