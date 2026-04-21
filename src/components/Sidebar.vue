@@ -207,7 +207,7 @@
     <!-- 合同详情面板 - 显示在项目详情右侧 -->
     <div
       class="contract-detail-panel"
-      :style="{ width: sidebarWidth + 'px' }"
+      :style="{ width: detailPanelWidth + 'px' }"
       v-if="selectedContract"
     >
       <div class="panel-header">
@@ -240,12 +240,13 @@
         <button class="action-btn edit-btn" @click="handleContractAction('edit')">✎ 修改</button>
         <button class="action-btn delete-btn" @click="handleContractAction('delete')">✕ 删除</button>
       </div>
+      <div class="resize-handle-detail" @mousedown="startDetailPanelResize"></div>
     </div>
 
     <!-- 发票详情面板 -->
     <div
       class="contract-detail-panel"
-      :style="{ width: sidebarWidth + 'px' }"
+      :style="{ width: detailPanelWidth + 'px' }"
       v-if="selectedInvoice"
     >
       <div class="panel-header">
@@ -286,12 +287,13 @@
         <button class="action-btn edit-btn" @click="handleInvoiceAction('edit')">✎ 修改</button>
         <button class="action-btn delete-btn" @click="handleInvoiceAction('delete')">✕ 删除</button>
       </div>
+      <div class="resize-handle-detail" @mousedown="startDetailPanelResize"></div>
     </div>
 
     <!-- 付款凭证详情面板 -->
     <div
       class="contract-detail-panel"
-      :style="{ width: sidebarWidth + 'px' }"
+      :style="{ width: detailPanelWidth + 'px' }"
       v-if="selectedPayment"
     >
       <div class="panel-header">
@@ -324,12 +326,13 @@
         <button class="action-btn edit-btn" @click="handlePaymentAction('edit')">✎ 修改</button>
         <button class="action-btn delete-btn" @click="handlePaymentAction('delete')">✕ 删除</button>
       </div>
+      <div class="resize-handle-detail" @mousedown="startDetailPanelResize"></div>
     </div>
 
     <!-- 验收详情面板 -->
     <div
       class="contract-detail-panel"
-      :style="{ width: sidebarWidth + 'px' }"
+      :style="{ width: detailPanelWidth + 'px' }"
       v-if="selectedAcceptance"
     >
       <div class="panel-header">
@@ -362,6 +365,7 @@
         <button class="action-btn edit-btn" @click="handleAcceptanceAction('edit')">✎ 修改</button>
         <button class="action-btn delete-btn" @click="handleAcceptanceAction('delete')">✕ 删除</button>
       </div>
+      <div class="resize-handle-detail" @mousedown="startDetailPanelResize"></div>
     </div>
 
     <div
@@ -1164,7 +1168,9 @@ const saveForm = async () => {
 
 let isResizing = false
 let isDetailResizing = false
+let isDetailPanelResizing = false
 const detailWidth = ref(320)
+const detailPanelWidth = ref(320)
 
 const startResize = (e) => {
   isResizing = true
@@ -1203,6 +1209,25 @@ const stopDetailResize = () => {
   isDetailResizing = false
   document.removeEventListener('mousemove', doDetailResize)
   document.removeEventListener('mouseup', stopDetailResize)
+}
+
+const startDetailPanelResize = (e) => {
+  isDetailPanelResizing = true
+  document.addEventListener('mousemove', doDetailPanelResize)
+  document.addEventListener('mouseup', stopDetailPanelResize)
+  e.preventDefault()
+}
+
+const doDetailPanelResize = (e) => {
+  if (!isDetailPanelResizing) return
+  const newWidth = Math.max(240, Math.min(500, e.clientX))
+  detailPanelWidth.value = newWidth
+}
+
+const stopDetailPanelResize = () => {
+  isDetailPanelResizing = false
+  document.removeEventListener('mousemove', doDetailPanelResize)
+  document.removeEventListener('mouseup', stopDetailPanelResize)
 }
 
 watch(() => props.activeModule, () => {
