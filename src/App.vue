@@ -88,6 +88,14 @@ const handleAction = async (payload) => {
       if (type === 'add') await api.createPerson(data)
       else if (type === 'edit') await api.updatePerson(data)
       else if (type === 'delete') { if (confirm('确定要删除此人员吗？')) await api.deletePerson(data.id) }
+    } else if (module === 'budgets') {
+      if (type === 'add') await api.createBudget(data)
+      else if (type === 'edit') await api.updateBudget(data)
+      else if (type === 'delete') { if (confirm('确定要删除此预算吗？')) await api.deleteBudget(data.id) }
+    } else if (module === 'tasks') {
+      if (type === 'add') await api.createTask(data)
+      else if (type === 'edit') await api.updateTask(data)
+      else if (type === 'delete') { if (confirm('确定要删除此任务吗？')) await api.deleteTask(data.id) }
     }
   } catch (err) {
     console.error('Action failed:', err)
@@ -149,5 +157,25 @@ body {
   width: 100%;
   height: 100%;
   z-index: 1;
+}
+
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(74, 144, 217, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 144, 217, 0.7);
 }
 </style>

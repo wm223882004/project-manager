@@ -13,19 +13,30 @@
       <table class="data-table">
         <thead>
           <tr>
+            <th>合同编号</th>
             <th>合同名称</th>
             <th>关联项目</th>
+            <th>类型</th>
             <th>金额</th>
-            <th>签订日期</th>
+            <th>收款进度</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in filteredContracts" :key="item.id">
+            <td>{{ item.code || '-' }}</td>
             <td>{{ item.name }}</td>
             <td>{{ item.project_name || '-' }}</td>
+            <td><span class="type-tag">{{ item.contract_type || '销售合同' }}</span></td>
             <td>¥{{ formatMoney(item.amount) }}</td>
-            <td>{{ formatDate(item.signed_date) }}</td>
+            <td>
+              <div class="progress-cell">
+                <div class="progress-bar">
+                  <div class="progress-fill" :style="{ width: getProgress(item) + '%' }"></div>
+                </div>
+                <span :class="['payment-status', item.payment_status]">{{ item.payment_status || '未收款' }}</span>
+              </div>
+            </td>
             <td>
               <button class="btn-edit" @click="editItem(item)">编辑</button>
               <button class="btn-delete" @click="deleteItem(item.id)">删除</button>
@@ -48,8 +59,21 @@
             </select>
           </div>
           <div class="form-group">
+            <label>合同编号</label>
+            <input v-model="formData.code" placeholder="如: CT-2024-001" />
+          </div>
+          <div class="form-group">
             <label>合同名称</label>
             <input v-model="formData.name" required />
+          </div>
+          <div class="form-group">
+            <label>合同类型</label>
+            <select v-model="formData.contract_type">
+              <option value="销售合同">销售合同</option>
+              <option value="采购合同">采购合同</option>
+              <option value="施工合同">施工合同</option>
+              <option value="服务合同">服务合同</option>
+            </select>
           </div>
           <div class="form-group">
             <label>合同金额</label>
@@ -77,7 +101,7 @@ const projects = ref([])
 const searchKeyword = ref('')
 const showAddModal = ref(false)
 const editingItem = ref(null)
-const formData = ref({ project_id: '', name: '', amount: '', signed_date: '' })
+const formData = ref({ project_id: '', code: '', name: '', contract_type: '销售合同', amount: '', signed_date: '' })
 
 const filteredContracts = computed(() => {
   if (!searchKeyword.value) return contracts.value
@@ -137,7 +161,7 @@ const deleteItem = async (id) => {
 const closeModal = () => {
   showAddModal.value = false
   editingItem.value = null
-  formData.value = { project_id: '', name: '', amount: '', signed_date: '' }
+  formData.value = { project_id: '', code: '', name: '', contract_type: '销售合同', amount: '', signed_date: '' }
 }
 
 const formatMoney = (amount) => {
@@ -148,6 +172,12 @@ const formatMoney = (amount) => {
 const formatDate = (dateStr) => {
   if (!dateStr) return '-'
   return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+const getProgress = (item) => {
+  if (!item.amount || item.amount === 0) return 0
+  const paid = item.paid_amount || 0
+  return Math.min(100, Math.round((paid / item.amount) * 100))
 }
 
 onMounted(() => {
@@ -171,6 +201,14 @@ onMounted(() => {
 .btn-edit, .btn-delete { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 6px; }
 .btn-edit { background: rgba(74,144,217,0.3); color: #4a90d9; }
 .btn-delete { background: rgba(237,137,54,0.3); color: #ed8936; }
+.type-tag { padding: 2px 6px; border-radius: 4px; font-size: 11px; background: rgba(100,150,255,0.2); color: rgba(255,255,255,0.8); }
+.progress-cell { display: flex; align-items: center; gap: 8px; }
+.progress-bar { width: 50px; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #48bb78, #68d391); border-radius: 3px; transition: width 0.3s; }
+.payment-status { font-size: 11px; padding: 1px 5px; border-radius: 3px; }
+.payment-status.已收款 { background: rgba(72,187,120,0.3); color: #48bb78; }
+.payment-status.部分收款 { background: rgba(237,137,54,0.3); color: #ed8936; }
+.payment-status.未收款 { background: rgba(150,150,150,0.3); color: #999; }
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal { background: #1a2744; border-radius: 12px; padding: 24px; width: 380px; border: 1px solid rgba(100,150,255,0.3); }
 .modal h4 { margin: 0 0 20px 0; color: #fff; font-size: 18px; }

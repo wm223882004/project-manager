@@ -132,6 +132,48 @@
           </div>
         </div>
 
+        <div class="detail-section" v-if="activeSubTab === 'budgets'">
+          <div class="section-header">
+            <span class="section-title">项目预算</span>
+            <button class="section-btn" @click="handleDetailAction('addBudget')">＋ 新增</button>
+          </div>
+          <div class="contract-list">
+            <div v-if="projectBudgets.length === 0" class="no-data">暂无预算记录</div>
+            <div
+              v-for="b in projectBudgets"
+              :key="b.id"
+              class="contract-item"
+            >
+              <div class="contract-info">
+                <span class="contract-name">{{ b.category }}</span>
+                <span class="contract-type">{{ b.description || '-' }}</span>
+              </div>
+              <span class="contract-amount">¥{{ formatAmount(b.amount) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section" v-if="activeSubTab === 'tasks'">
+          <div class="section-header">
+            <span class="section-title">项目任务</span>
+            <button class="section-btn" @click="handleDetailAction('addTask')">＋ 新增</button>
+          </div>
+          <div class="contract-list">
+            <div v-if="projectTasks.length === 0" class="no-data">暂无任务</div>
+            <div
+              v-for="t in projectTasks"
+              :key="t.id"
+              :class="['contract-item', { completed: t.status === '已完成' }]"
+            >
+              <div class="contract-info">
+                <span class="contract-name">{{ t.name }}</span>
+                <span class="contract-type">{{ t.due_date || '无截止日期' }}</span>
+              </div>
+              <span :class="['task-status', t.status]">{{ t.status }}</span>
+            </div>
+          </div>
+        </div>
+
         <div class="detail-info" v-if="activeSubTab === 'info'">
           <div class="info-row">
             <span class="info-label">项目编号</span>
@@ -197,6 +239,128 @@
       <div class="detail-actions">
         <button class="action-btn edit-btn" @click="handleContractAction('edit')">✎ 修改</button>
         <button class="action-btn delete-btn" @click="handleContractAction('delete')">✕ 删除</button>
+      </div>
+    </div>
+
+    <!-- 发票详情面板 -->
+    <div
+      class="contract-detail-panel"
+      :style="{ width: sidebarWidth + 'px' }"
+      v-if="selectedInvoice"
+    >
+      <div class="panel-header">
+        <button class="back-btn" @click="selectedInvoice = null">←</button>
+        <h3>{{ selectedInvoice.invoice_no }}</h3>
+        <button class="close-btn" @click="selectedInvoice = null">×</button>
+      </div>
+      <div class="detail-content">
+        <div class="detail-section">
+          <div class="section-title">发票信息</div>
+          <div class="info-row">
+            <span class="info-label">发票号码</span>
+            <span class="info-value">{{ selectedInvoice.invoice_no }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">发票金额</span>
+            <span class="info-value amount">¥{{ formatAmount(selectedInvoice.amount) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">已收金额</span>
+            <span class="info-value amount">¥{{ formatAmount(selectedInvoice.paid_amount) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">开票日期</span>
+            <span class="info-value">{{ selectedInvoice.date }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">收款状态</span>
+            <span :class="['info-status', selectedInvoice.payment_status]">{{ selectedInvoice.payment_status || '未收款' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">关联合同</span>
+            <span class="info-value">{{ selectedInvoice.contract_name }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="detail-actions">
+        <button class="action-btn edit-btn" @click="handleInvoiceAction('edit')">✎ 修改</button>
+        <button class="action-btn delete-btn" @click="handleInvoiceAction('delete')">✕ 删除</button>
+      </div>
+    </div>
+
+    <!-- 付款凭证详情面板 -->
+    <div
+      class="contract-detail-panel"
+      :style="{ width: sidebarWidth + 'px' }"
+      v-if="selectedPayment"
+    >
+      <div class="panel-header">
+        <button class="back-btn" @click="selectedPayment = null">←</button>
+        <h3>{{ selectedPayment.receipt_no || '付款凭证' }}</h3>
+        <button class="close-btn" @click="selectedPayment = null">×</button>
+      </div>
+      <div class="detail-content">
+        <div class="detail-section">
+          <div class="section-title">付款信息</div>
+          <div class="info-row">
+            <span class="info-label">付款金额</span>
+            <span class="info-value amount">¥{{ formatAmount(selectedPayment.amount) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">付款日期</span>
+            <span class="info-value">{{ selectedPayment.date }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">凭证号</span>
+            <span class="info-value">{{ selectedPayment.receipt_no || '-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">关联发票</span>
+            <span class="info-value">{{ selectedPayment.invoice_no }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="detail-actions">
+        <button class="action-btn edit-btn" @click="handlePaymentAction('edit')">✎ 修改</button>
+        <button class="action-btn delete-btn" @click="handlePaymentAction('delete')">✕ 删除</button>
+      </div>
+    </div>
+
+    <!-- 验收详情面板 -->
+    <div
+      class="contract-detail-panel"
+      :style="{ width: sidebarWidth + 'px' }"
+      v-if="selectedAcceptance"
+    >
+      <div class="panel-header">
+        <button class="back-btn" @click="selectedAcceptance = null">←</button>
+        <h3>{{ selectedAcceptance.name }}</h3>
+        <button class="close-btn" @click="selectedAcceptance = null">×</button>
+      </div>
+      <div class="detail-content">
+        <div class="detail-section">
+          <div class="section-title">验收信息</div>
+          <div class="info-row">
+            <span class="info-label">验收名称</span>
+            <span class="info-value">{{ selectedAcceptance.name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">验收状态</span>
+            <span :class="['info-status', selectedAcceptance.status]">{{ selectedAcceptance.status }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">验收日期</span>
+            <span class="info-value">{{ selectedAcceptance.date || '-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">关联项目</span>
+            <span class="info-value">{{ selectedAcceptance.project_name }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="detail-actions">
+        <button class="action-btn edit-btn" @click="handleAcceptanceAction('edit')">✎ 修改</button>
+        <button class="action-btn delete-btn" @click="handleAcceptanceAction('delete')">✕ 删除</button>
       </div>
     </div>
 
@@ -346,6 +510,41 @@
           </div>
         </template>
 
+        <!-- 预算表单 (从项目详情添加) -->
+        <template v-else-if="formData && formData.category !== undefined && formData.amount !== undefined && formData.description !== undefined && formData.name === undefined">
+          <div class="form-group">
+            <label>预算类别</label>
+            <input v-model="formData.category" required placeholder="如：设备采购、人员成本" />
+          </div>
+          <div class="form-group">
+            <label>预算金额</label>
+            <input type="number" v-model="formData.amount" required placeholder="请输入金额" />
+          </div>
+          <div class="form-group">
+            <label>说明</label>
+            <input v-model="formData.description" placeholder="预算说明" />
+          </div>
+        </template>
+
+        <!-- 任务表单 (从项目详情添加) -->
+        <template v-else-if="formData && formData.status !== undefined && formData.name !== undefined && formData.category === undefined">
+          <div class="form-group">
+            <label>任务名称</label>
+            <input v-model="formData.name" required placeholder="请输入任务名称" />
+          </div>
+          <div class="form-group">
+            <label>任务状态</label>
+            <select v-model="formData.status">
+              <option value="进行中">进行中</option>
+              <option value="已完成">已完成</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>截止日期</label>
+            <input type="date" v-model="formData.due_date" />
+          </div>
+        </template>
+
         <!-- 付款凭证表单 -->
         <template v-else-if="activeModule === 'payments'">
           <div class="form-group">
@@ -468,8 +667,13 @@ const people = ref([])
 const selectedItem = ref(null)
 const showDetailView = ref(false)
 const selectedContract = ref(null)
+const selectedInvoice = ref(null)
+const selectedPayment = ref(null)
+const selectedAcceptance = ref(null)
 const projectContracts = ref([])
 const projectInvoices = ref([])
+const projectBudgets = ref([])
+const projectTasks = ref([])
 const activeSubTab = ref('contracts')
 
 const salesContracts = computed(() => {
@@ -650,6 +854,14 @@ const selectItem = (item) => {
     // Load project related data
     loadProjectContracts(item.id)
     loadProjectInvoices(item.id)
+    loadProjectBudgets(item.id)
+    loadProjectTasks(item.id)
+  } else if (props.activeModule === 'invoices') {
+    selectedInvoice.value = item
+  } else if (props.activeModule === 'payments') {
+    selectedPayment.value = item
+  } else if (props.activeModule === 'acceptances') {
+    selectedAcceptance.value = item
   } else {
     // For other modules, also show detail view if item supports it
     if (item.name) {
@@ -678,6 +890,22 @@ const loadProjectInvoices = async (projectId) => {
   }
 }
 
+const loadProjectBudgets = async (projectId) => {
+  try {
+    projectBudgets.value = await window.electronAPI.getBudgetsByProject(projectId)
+  } catch (err) {
+    console.error('Failed to load project budgets:', err)
+  }
+}
+
+const loadProjectTasks = async (projectId) => {
+  try {
+    projectTasks.value = await window.electronAPI.getTasksByProject(projectId)
+  } catch (err) {
+    console.error('Failed to load project tasks:', err)
+  }
+}
+
 const selectContract = (contract) => {
   selectedContract.value = contract
 }
@@ -700,9 +928,52 @@ const handleContractAction = (action) => {
   }
 }
 
+const handleInvoiceAction = (action) => {
+  if (action === 'edit') {
+    formAction.value = 'edit'
+    showDeleteConfirm.value = false
+    formData.value = { ...selectedInvoice.value }
+    showForm.value = true
+  } else if (action === 'delete') {
+    formAction.value = 'delete'
+    showDeleteConfirm.value = true
+    showForm.value = true
+  }
+}
+
+const handlePaymentAction = (action) => {
+  if (action === 'edit') {
+    formAction.value = 'edit'
+    showDeleteConfirm.value = false
+    formData.value = { ...selectedPayment.value }
+    showForm.value = true
+  } else if (action === 'delete') {
+    formAction.value = 'delete'
+    showDeleteConfirm.value = true
+    showForm.value = true
+  }
+}
+
+const handleAcceptanceAction = (action) => {
+  if (action === 'edit') {
+    formAction.value = 'edit'
+    showDeleteConfirm.value = false
+    formData.value = { ...selectedAcceptance.value }
+    selectedItem.value = projects.value.find(p => p.id === selectedAcceptance.value.project_id)
+    showForm.value = true
+  } else if (action === 'delete') {
+    formAction.value = 'delete'
+    showDeleteConfirm.value = true
+    showForm.value = true
+  }
+}
+
 const closeDetailView = () => {
   showDetailView.value = false
   selectedContract.value = null
+  selectedInvoice.value = null
+  selectedPayment.value = null
+  selectedAcceptance.value = null
 }
 
 const handleDetailAction = (action) => {
@@ -710,6 +981,16 @@ const handleDetailAction = (action) => {
     formAction.value = 'add'
     showDeleteConfirm.value = false
     formData.value = { project_id: selectedItem.value.id, contract_type: '销售合同', name: '', amount: '', signed_date: '' }
+    showForm.value = true
+  } else if (action === 'addBudget') {
+    formAction.value = 'add'
+    showDeleteConfirm.value = false
+    formData.value = { project_id: selectedItem.value.id, category: '', amount: '', description: '' }
+    showForm.value = true
+  } else if (action === 'addTask') {
+    formAction.value = 'add'
+    showDeleteConfirm.value = false
+    formData.value = { project_id: selectedItem.value.id, name: '', status: '进行中', due_date: '' }
     showForm.value = true
   } else if (action === 'editProject') {
     formAction.value = 'edit'
@@ -729,6 +1010,8 @@ const handleDetailAction = (action) => {
 const projectSubTabs = [
   { key: 'contracts', label: '合同' },
   { key: 'invoices', label: '发票' },
+  { key: 'budgets', label: '预算' },
+  { key: 'tasks', label: '任务' },
   { key: 'info', label: '信息' }
 ]
 
@@ -821,6 +1104,10 @@ const formData = ref(getDefaultFormData())
 const saveForm = async () => {
   const saveData = { ...formData.value }
 
+  // 判断是预算还是任务表单
+  const isBudgetForm = formData.value.category !== undefined && formData.value.amount !== undefined && formData.value.description !== undefined && formData.value.name === undefined
+  const isTaskForm = formData.value.status !== undefined && formData.value.name !== undefined && formData.value.category === undefined
+
   // 项目处理地点 - 使用cityObj
   if (props.activeModule === 'projects' && formData.value.cityObj) {
     saveData.city_id = formData.value.cityObj.id
@@ -832,6 +1119,25 @@ const saveForm = async () => {
   delete saveData.project_name
   delete saveData.contract_name
   delete saveData.invoice_no
+
+  // 处理预算和任务
+  if (isBudgetForm) {
+    emit('action', { type: formAction.value, module: 'budgets', data: saveData })
+    closeForm()
+    if (selectedItem.value) {
+      loadProjectBudgets(selectedItem.value.id)
+    }
+    return
+  }
+
+  if (isTaskForm) {
+    emit('action', { type: formAction.value, module: 'tasks', data: saveData })
+    closeForm()
+    if (selectedItem.value) {
+      loadProjectTasks(selectedItem.value.id)
+    }
+    return
+  }
 
   if (formAction.value === 'delete') {
     emit('action', { type: 'delete', module: props.activeModule, data: saveData })
@@ -890,6 +1196,9 @@ watch(() => props.activeModule, () => {
   selectedItem.value = null
   showDetailView.value = false
   selectedContract.value = null
+  selectedInvoice.value = null
+  selectedPayment.value = null
+  selectedAcceptance.value = null
   searchKeyword.value = ''
   formData.value = getDefaultFormData()
 })
@@ -898,11 +1207,17 @@ watch(panelCollapsed, (val) => {
   if (val) {
     showDetailView.value = false
     selectedContract.value = null
+    selectedInvoice.value = null
+    selectedPayment.value = null
+    selectedAcceptance.value = null
   }
   updateSidebarOffset()
 })
 
 watch(() => props.activeModule, () => {
+  selectedInvoice.value = null
+  selectedPayment.value = null
+  selectedAcceptance.value = null
   updateSidebarOffset()
 })
 
@@ -1668,6 +1983,26 @@ onMounted(() => {
   color: #ef6461;
 }
 
+.info-status.已收款 {
+  background: rgba(72,187,120,0.2);
+  color: #48bb78;
+}
+
+.info-status.部分收款 {
+  background: rgba(237,137,54,0.2);
+  color: #ed8936;
+}
+
+.info-status.未收款 {
+  background: rgba(150,150,150,0.2);
+  color: #999;
+}
+
+.info-status.待验收 {
+  background: rgba(74,144,217,0.2);
+  color: #4a90d9;
+}
+
 .contract-list {
   max-height: 200px;
   overflow-y: auto;
@@ -1768,5 +2103,35 @@ onMounted(() => {
 .info-value.amount {
   color: #48bb78;
   font-size: 14px;
+}
+
+.task-status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.task-status.进行中 {
+  background: rgba(74,144,217,0.2);
+  color: #4a90d9;
+}
+
+.task-status.已完成 {
+  background: rgba(72,187,120,0.2);
+  color: #48bb78;
+}
+
+.task-status.已验收 {
+  background: rgba(72,187,120,0.2);
+  color: #48bb78;
+}
+
+.contract-item.completed {
+  opacity: 0.7;
+}
+
+.contract-item.completed .contract-name {
+  text-decoration: line-through;
 }
 </style>

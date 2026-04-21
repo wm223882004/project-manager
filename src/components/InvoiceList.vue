@@ -16,7 +16,9 @@
             <th>发票号</th>
             <th>关联合同</th>
             <th>金额</th>
+            <th>已收</th>
             <th>开票日期</th>
+            <th>收款状态</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -25,7 +27,9 @@
             <td>{{ item.invoice_no }}</td>
             <td>{{ item.contract_name || '-' }}</td>
             <td>¥{{ formatMoney(item.amount) }}</td>
+            <td>¥{{ formatMoney(item.paid_amount) }}</td>
             <td>{{ formatDate(item.date) }}</td>
+            <td><span :class="['status-tag', item.payment_status]">{{ item.payment_status || '未收款' }}</span></td>
             <td>
               <button class="btn-edit" @click="editItem(item)">编辑</button>
               <button class="btn-delete" @click="deleteItem(item.id)">删除</button>
@@ -171,6 +175,10 @@ onMounted(() => {
 .btn-edit, .btn-delete { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 6px; }
 .btn-edit { background: rgba(74,144,217,0.3); color: #4a90d9; }
 .btn-delete { background: rgba(237,137,54,0.3); color: #ed8936; }
+.status-tag { font-size: 11px; padding: 2px 6px; border-radius: 3px; }
+.status-tag.已收款 { background: rgba(72,187,120,0.3); color: #48bb78; }
+.status-tag.部分收款 { background: rgba(237,137,54,0.3); color: #ed8936; }
+.status-tag.未收款 { background: rgba(150,150,150,0.3); color: #999; }
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal { background: #1a2744; border-radius: 12px; padding: 24px; width: 380px; border: 1px solid rgba(100,150,255,0.3); }
 .modal h4 { margin: 0 0 20px 0; color: #fff; font-size: 18px; }

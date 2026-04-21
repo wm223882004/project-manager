@@ -16,7 +16,8 @@
             <th>项目名称</th>
             <th>项目编码</th>
             <th>状态</th>
-            <th>创建时间</th>
+            <th>进度</th>
+            <th>预算</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -25,7 +26,15 @@
             <td>{{ item.name }}</td>
             <td>{{ item.code }}</td>
             <td><span :class="['status', item.status]">{{ item.status }}</span></td>
-            <td>{{ formatDate(item.created_at) }}</td>
+            <td>
+              <div class="progress-cell">
+                <div class="progress-bar">
+                  <div class="progress-fill" :style="{ width: item.task_progress + '%' }"></div>
+                </div>
+                <span class="progress-text">{{ item.task_progress }}%</span>
+              </div>
+            </td>
+            <td>{{ formatMoney(item.total_budget) }}</td>
             <td>
               <button class="btn-edit" @click="editItem(item)">编辑</button>
               <button class="btn-delete" @click="deleteItem(item.id)">删除</button>
@@ -59,6 +68,7 @@
               <option value="进行中">进行中</option>
               <option value="已完成">已完成</option>
               <option value="已暂停">已暂停</option>
+              <option value="已延期">已延期</option>
             </select>
           </div>
           <div class="form-actions">
@@ -146,6 +156,13 @@ const goToEdit = () => {
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+const formatMoney = (amount) => {
+  if (!amount) return '0'
+  if (amount >= 100000000) return (amount / 100000000).toFixed(1) + '亿'
+  if (amount >= 10000) return (amount / 10000).toFixed(0) + '万'
+  return amount.toFixed(0)
 }
 
 onMounted(() => {
@@ -256,6 +273,38 @@ onMounted(() => {
 .status.已暂停 {
   background: rgba(237, 137, 54, 0.3);
   color: #ed8936;
+}
+
+.status.已延期 {
+  background: rgba(237, 100, 100, 0.3);
+  color: #ef6461;
+}
+
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-bar {
+  width: 60px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a90d9, #67b3e8);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 28px;
 }
 
 .btn-edit, .btn-delete {
