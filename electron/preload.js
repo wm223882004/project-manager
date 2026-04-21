@@ -46,5 +46,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Cities
   getCities: () => ipcRenderer.invoke('db:cities:getAll'),
   searchCities: (keyword) => ipcRenderer.invoke('db:cities:search', keyword),
-  getCityById: (id) => ipcRenderer.invoke('db:cities:getById', id)
+  getCityById: (id) => ipcRenderer.invoke('db:cities:getById', id),
+
+  // Project Budgets
+  getBudgets: () => ipcRenderer.invoke('db:budgets:getAll'),
+  getBudgetsByProject: (projectId) => ipcRenderer.invoke('db:budgets:getByProject', projectId),
+  createBudget: (data) => ipcRenderer.invoke('db:budgets:create', data),
+  updateBudget: (data) => ipcRenderer.invoke('db:budgets:update', data),
+  deleteBudget: (id) => ipcRenderer.invoke('db:budgets:delete', id),
+
+  // Project Tasks
+  getTasks: () => ipcRenderer.invoke('db:tasks:getAll'),
+  getTasksByProject: (projectId) => ipcRenderer.invoke('db:tasks:getByProject', projectId),
+  createTask: (data) => ipcRenderer.invoke('db:tasks:create', data),
+  updateTask: (data) => ipcRenderer.invoke('db:tasks:update', data),
+  deleteTask: (id) => ipcRenderer.invoke('db:tasks:delete', id)
 })

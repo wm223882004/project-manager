@@ -47,6 +47,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS contracts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER,
+      code TEXT,
       name TEXT NOT NULL,
       contract_type TEXT DEFAULT '销售合同',
       amount REAL,
@@ -55,6 +56,13 @@ async function initDatabase() {
       FOREIGN KEY (project_id) REFERENCES projects(id)
     )
   `)
+
+  // Add code column to contracts if not exists
+  try {
+    db.run("ALTER TABLE contracts ADD COLUMN code TEXT")
+  } catch (e) {
+    // Column already exists
+  }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS invoices (
@@ -84,13 +92,22 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS acceptances (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER,
+      task_id INTEGER,
       name TEXT,
       status TEXT DEFAULT '待验收',
       date DATE,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (project_id) REFERENCES projects(id)
+      FOREIGN KEY (project_id) REFERENCES projects(id),
+      FOREIGN KEY (task_id) REFERENCES project_tasks(id)
     )
   `)
+
+  // Add task_id column to acceptances if not exists
+  try {
+    db.run("ALTER TABLE acceptances ADD COLUMN task_id INTEGER")
+  } catch (e) {
+    // Column already exists
+  }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS people (
@@ -114,6 +131,33 @@ async function initDatabase() {
       lon REAL,
       country TEXT DEFAULT '中国',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  // 项目预算表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS project_budgets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER,
+      category TEXT NOT NULL,
+      amount REAL,
+      description TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `)
+
+  // 项目任务表
+  db.run(`
+    CREATE TABLE IF NOT EXISTS project_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER,
+      name TEXT NOT NULL,
+      status TEXT DEFAULT '待开始',
+      due_date DATE,
+      completed_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
     )
   `)
 
@@ -182,61 +226,61 @@ function seedData() {
   // 合同数据 - 17个项目有合同，3个项目无合同(PRJ2024010,PRJ2024016,PRJ2024017)
   const contracts = [
     // 项目1 - 3个合同
-    { project_id: 1, name: '智慧园区系统采购合同', contract_type: '采购合同', amount: 28000000, signed_date: '2024-01-20' },
-    { project_id: 1, name: '网络基础设施建设合同', contract_type: '施工合同', amount: 15000000, signed_date: '2024-02-15' },
-    { project_id: 1, name: '软件平台开发合同', contract_type: '服务合同', amount: 8000000, signed_date: '2024-03-10' },
+    { project_id: 1, code: 'CT-2024-001', name: '智慧园区系统采购合同', contract_type: '采购合同', amount: 28000000, signed_date: '2024-01-20' },
+    { project_id: 1, code: 'CT-2024-002', name: '网络基础设施建设合同', contract_type: '施工合同', amount: 15000000, signed_date: '2024-02-15' },
+    { project_id: 1, code: 'CT-2024-003', name: '软件平台开发合同', contract_type: '服务合同', amount: 8000000, signed_date: '2024-03-10' },
 
     // 项目2 - 2个合同
-    { project_id: 2, name: '数据中心设备采购合同', contract_type: '采购合同', amount: 45000000, signed_date: '2024-03-10' },
-    { project_id: 2, name: '机房装修合同', contract_type: '施工合同', amount: 12000000, signed_date: '2024-03-25' },
+    { project_id: 2, code: 'CT-2024-004', name: '数据中心设备采购合同', contract_type: '采购合同', amount: 45000000, signed_date: '2024-03-10' },
+    { project_id: 2, code: 'CT-2024-005', name: '机房装修合同', contract_type: '施工合同', amount: 12000000, signed_date: '2024-03-25' },
 
     // 项目3 - 2个合同
-    { project_id: 3, name: '物流系统设备采购', contract_type: '采购合同', amount: 22000000, signed_date: '2024-05-15' },
-    { project_id: 3, name: '系统集成合同', contract_type: '服务合同', amount: 6000000, signed_date: '2024-06-01' },
+    { project_id: 3, code: 'CT-2024-006', name: '物流系统设备采购', contract_type: '采购合同', amount: 22000000, signed_date: '2024-05-15' },
+    { project_id: 3, code: 'CT-2024-007', name: '系统集成合同', contract_type: '服务合同', amount: 6000000, signed_date: '2024-06-01' },
 
     // 项目4 - 1个合同
-    { project_id: 4, name: '云计算中心建设合同', contract_type: '施工合同', amount: 35000000, signed_date: '2024-02-20' },
+    { project_id: 4, code: 'CT-2024-008', name: '云计算中心建设合同', contract_type: '施工合同', amount: 35000000, signed_date: '2024-02-20' },
 
     // 项目5 - 2个合同
-    { project_id: 5, name: '指挥系统设备合同', contract_type: '采购合同', amount: 18000000, signed_date: '2024-06-15' },
-    { project_id: 5, name: '软件授权合同', contract_type: '服务合同', amount: 5000000, signed_date: '2024-06-20' },
+    { project_id: 5, code: 'CT-2024-009', name: '指挥系统设备合同', contract_type: '采购合同', amount: 18000000, signed_date: '2024-06-15' },
+    { project_id: 5, code: 'CT-2024-010', name: '软件授权合同', contract_type: '服务合同', amount: 5000000, signed_date: '2024-06-20' },
 
     // 项目6 - 1个合同
-    { project_id: 6, name: '智慧园区总包合同', contract_type: '施工合同', amount: 28000000, signed_date: '2024-04-20' },
+    { project_id: 6, code: 'CT-2024-011', name: '智慧园区总包合同', contract_type: '施工合同', amount: 28000000, signed_date: '2024-04-20' },
 
     // 项目7 - 2个合同
-    { project_id: 7, name: '智能制造设备采购', contract_type: '采购合同', amount: 20000000, signed_date: '2024-03-25' },
-    { project_id: 7, name: 'MES系统开发合同', contract_type: '服务合同', amount: 7500000, signed_date: '2024-04-10' },
+    { project_id: 7, code: 'CT-2024-012', name: '智能制造设备采购', contract_type: '采购合同', amount: 20000000, signed_date: '2024-03-25' },
+    { project_id: 7, code: 'CT-2024-013', name: 'MES系统开发合同', contract_type: '服务合同', amount: 7500000, signed_date: '2024-04-10' },
 
     // 项目8 - 无合同
     // 项目9 (已完成) - 2个合同
-    { project_id: 9, name: '信号系统采购安装合同', contract_type: '采购合同', amount: 32000000, signed_date: '2023-06-15' },
-    { project_id: 9, name: '系统维护合同', contract_type: '服务合同', amount: 4000000, signed_date: '2023-07-01' },
+    { project_id: 9, code: 'CT-2023-001', name: '信号系统采购安装合同', contract_type: '采购合同', amount: 32000000, signed_date: '2023-06-15' },
+    { project_id: 9, code: 'CT-2023-002', name: '系统维护合同', contract_type: '服务合同', amount: 4000000, signed_date: '2023-07-01' },
 
     // 项目10 (已完成) - 1个合同
-    { project_id: 10, name: '机场配套设施合同', contract_type: '施工合同', amount: 55000000, signed_date: '2023-03-15' },
+    { project_id: 10, code: 'CT-2023-003', name: '机场配套设施合同', contract_type: '施工合同', amount: 55000000, signed_date: '2023-03-15' },
 
     // 项目11 (已完成) - 2个合同
-    { project_id: 11, name: '场馆改造设备采购', contract_type: '采购合同', amount: 15000000, signed_date: '2023-01-15' },
-    { project_id: 11, name: '系统调试合同', contract_type: '服务合同', amount: 3000000, signed_date: '2023-02-01' },
+    { project_id: 11, code: 'CT-2023-004', name: '场馆改造设备采购', contract_type: '采购合同', amount: 15000000, signed_date: '2023-01-15' },
+    { project_id: 11, code: 'CT-2023-005', name: '系统调试合同', contract_type: '服务合同', amount: 3000000, signed_date: '2023-02-01' },
 
     // 项目12 (已完成) - 1个合同
-    { project_id: 12, name: '数据中心建设合同', contract_type: '施工合同', amount: 40000000, signed_date: '2023-05-10' },
+    { project_id: 12, code: 'CT-2023-006', name: '数据中心建设合同', contract_type: '施工合同', amount: 40000000, signed_date: '2023-05-10' },
 
     // 项目13 (已完成) - 1个合同
-    { project_id: 13, name: '智能交通系统合同', contract_type: '采购合同', amount: 25000000, signed_date: '2023-04-15' },
+    { project_id: 13, code: 'CT-2023-007', name: '智能交通系统合同', contract_type: '采购合同', amount: 25000000, signed_date: '2023-04-15' },
 
     // 项目14 (已暂停) - 2个合同
-    { project_id: 14, name: '城市大脑平台合同', contract_type: '服务合同', amount: 30000000, signed_date: '2024-08-15' },
-    { project_id: 14, name: '硬件设备采购', contract_type: '采购合同', amount: 18000000, signed_date: '2024-08-20' },
+    { project_id: 14, code: 'CT-2024-014', name: '城市大脑平台合同', contract_type: '服务合同', amount: 30000000, signed_date: '2024-08-15' },
+    { project_id: 14, code: 'CT-2024-015', name: '硬件设备采购', contract_type: '采购合同', amount: 18000000, signed_date: '2024-08-20' },
 
     // 项目15 (已暂停) - 1个合同
-    { project_id: 15, name: '智能电网设备合同', contract_type: '采购合同', amount: 22000000, signed_date: '2024-05-20' },
+    { project_id: 15, code: 'CT-2024-016', name: '智能电网设备合同', contract_type: '采购合同', amount: 22000000, signed_date: '2024-05-20' },
 
     // 项目16 (已暂停) - 无合同
 
     // 项目17 (已延期) - 1个合同
-    { project_id: 17, name: '智慧物流系统合同', contract_type: '采购合同', amount: 19000000, signed_date: '2024-01-10' },
+    { project_id: 17, code: 'CT-2024-017', name: '智慧物流系统合同', contract_type: '采购合同', amount: 19000000, signed_date: '2024-01-10' },
 
     // 项目18 (已延期) - 无合同
     // 项目19 (已延期) - 无合同
@@ -244,8 +288,8 @@ function seedData() {
   ]
 
   contracts.forEach(c => {
-    db.run("INSERT INTO contracts (project_id, name, contract_type, amount, signed_date) VALUES (?, ?, ?, ?, ?)",
-      [c.project_id, c.name, c.contract_type, c.amount, c.signed_date])
+    db.run("INSERT INTO contracts (project_id, code, name, contract_type, amount, signed_date) VALUES (?, ?, ?, ?, ?, ?)",
+      [c.project_id, c.code, c.name, c.contract_type, c.amount, c.signed_date])
   })
 
   // 发票数据 - 覆盖各种情况：有凭证/无凭证
@@ -369,41 +413,41 @@ function seedData() {
       [p.invoice_id, p.amount, p.date, p.receipt_no])
   })
 
-  // 验收数据
+  // 验收数据 - 关联任务
   const acceptances = [
-    // 项目1 - 待验收
-    { project_id: 1, name: '一期网络基础设施验收', status: '待验收', date: '2024-12-31' },
-    // 项目2 - 已验收
-    { project_id: 2, name: '数据中心机房验收', status: '已验收', date: '2024-10-15' },
+    // 项目1 - 待验收 (关联任务4:系统部署)
+    { project_id: 1, task_id: 4, name: '一期网络基础设施验收', status: '待验收', date: '2024-12-31' },
+    // 项目2 - 已验收 (关联任务4:系统调试)
+    { project_id: 2, task_id: 8, name: '数据中心机房验收', status: '已验收', date: '2024-10-15' },
     // 项目3 - 进行中无验收
     // 项目4 - 进行中无验收
     // 项目5 - 进行中无验收
     // 项目6 - 进行中无验收
     // 项目7 - 进行中无验收
     // 项目8 - 进行中无验收
-    // 项目9(已完成) - 已验收
-    { project_id: 9, name: '信号系统验收', status: '已验收', date: '2024-06-30' },
-    // 项目10(已完成) - 已验收
-    { project_id: 10, name: '机场配套设施验收', status: '已验收', date: '2024-03-15' },
-    // 项目11(已完成) - 已验收
-    { project_id: 11, name: '场馆系统验收', status: '已验收', date: '2024-01-10' },
-    // 项目12(已完成) - 不通过
-    { project_id: 12, name: '数据中心验收', status: '不通过', date: '2024-05-20' },
-    // 项目13(已完成) - 已验收
-    { project_id: 13, name: '智能交通系统验收', status: '已验收', date: '2024-04-25' },
-    // 项目14(已暂停) - 待验收
-    { project_id: 14, name: '平台一期验收', status: '待验收', date: '2024-12-31' },
-    // 项目15(已暂停) - 待验收
-    { project_id: 15, name: '电网设备验收', status: '待验收', date: '2024-11-30' },
+    // 项目9(已完成) - 已验收 (关联任务4:验收交付)
+    { project_id: 9, task_id: 36, name: '信号系统验收', status: '已验收', date: '2024-06-30' },
+    // 项目10(已完成) - 已验收 (关联任务3:竣工验收)
+    { project_id: 10, task_id: 43, name: '机场配套设施验收', status: '已验收', date: '2024-03-15' },
+    // 项目11(已完成) - 已验收 (关联任务3:系统验收)
+    { project_id: 11, task_id: 46, name: '场馆系统验收', status: '已验收', date: '2024-01-10' },
+    // 项目12(已完成) - 不通过 (关联任务4:验收交付)
+    { project_id: 12, task_id: 52, name: '数据中心验收', status: '不通过', date: '2024-05-20' },
+    // 项目13(已完成) - 已验收 (关联任务3:系统上线)
+    { project_id: 13, task_id: 55, name: '智能交通系统验收', status: '已验收', date: '2024-04-25' },
+    // 项目14(已暂停) - 待验收 (关联任务1:平台开发)
+    { project_id: 14, task_id: 56, name: '平台一期验收', status: '待验收', date: '2024-12-31' },
+    // 项目15(已暂停) - 待验收 (关联任务2:设备采购)
+    { project_id: 15, task_id: 59, name: '电网设备验收', status: '待验收', date: '2024-11-30' },
     // 项目16(已暂停) - 无验收
-    // 项目17(已延期) - 待验收
-    { project_id: 17, name: '物流系统验收', status: '待验收', date: '2024-10-31' },
+    // 项目17(已延期) - 待验收 (关联任务2:方案设计)
+    { project_id: 17, task_id: 63, name: '物流系统验收', status: '待验收', date: '2024-10-31' },
     // 项目18-20 - 无验收
   ]
 
   acceptances.forEach(a => {
-    db.run("INSERT INTO acceptances (project_id, name, status, date) VALUES (?, ?, ?, ?)",
-      [a.project_id, a.name, a.status, a.date])
+    db.run("INSERT INTO acceptances (project_id, task_id, name, status, date) VALUES (?, ?, ?, ?, ?)",
+      [a.project_id, a.task_id || null, a.name, a.status, a.date])
   })
 
   // 人员数据
@@ -423,6 +467,182 @@ function seedData() {
   people.forEach(p => {
     db.run("INSERT INTO people (name, position, phone, email) VALUES (?, ?, ?, ?)",
       [p.name, p.position, p.phone, p.email])
+  })
+
+  // 项目预算数据
+  const budgets = [
+    // 项目1
+    { project_id: 1, category: '设备采购', amount: 20000000, description: '智慧园区系统设备' },
+    { project_id: 1, category: '工程施工', amount: 15000000, description: '网络基础设施建设' },
+    { project_id: 1, category: '软件开发', amount: 8000000, description: '平台软件开发' },
+    // 项目2
+    { project_id: 2, category: '设备采购', amount: 35000000, description: '数据中心设备' },
+    { project_id: 2, category: '装修工程', amount: 12000000, description: '机房装修' },
+    // 项目3
+    { project_id: 3, category: '设备采购', amount: 18000000, description: '物流系统设备' },
+    { project_id: 3, category: '系统集成', amount: 6000000, description: '系统集成服务' },
+    // 项目4
+    { project_id: 4, category: '工程建设', amount: 35000000, description: '云计算中心建设' },
+    // 项目5
+    { project_id: 5, category: '设备采购', amount: 15000000, description: '指挥系统设备' },
+    { project_id: 5, category: '软件授权', amount: 5000000, description: '软件授权许可' },
+    // 项目6
+    { project_id: 6, category: '工程建设', amount: 28000000, description: '智慧园区总包' },
+    // 项目7
+    { project_id: 7, category: '设备采购', amount: 18000000, description: '智能制造设备' },
+    { project_id: 7, category: '软件开发', amount: 7500000, description: 'MES系统开发' },
+    // 项目8
+    { project_id: 8, category: '设备采购', amount: 22000000, description: '港口自动化设备' },
+    { project_id: 8, category: '系统集成', amount: 8000000, description: '系统集成服务' },
+    // 项目9
+    { project_id: 9, category: '设备采购', amount: 25000000, description: '信号系统设备' },
+    { project_id: 9, category: '维保服务', amount: 4000000, description: '系统维护' },
+    // 项目10
+    { project_id: 10, category: '工程建设', amount: 45000000, description: '机场配套设施' },
+    // 项目11
+    { project_id: 11, category: '设备采购', amount: 12000000, description: '场馆改造设备' },
+    { project_id: 11, category: '调试服务', amount: 3000000, description: '系统调试' },
+    // 项目12
+    { project_id: 12, category: '工程建设', amount: 40000000, description: '数据中心建设' },
+    // 项目13
+    { project_id: 13, category: '设备采购', amount: 25000000, description: '智能交通设备' },
+    // 项目14
+    { project_id: 14, category: '软件开发', amount: 25000000, description: '城市大脑平台' },
+    { project_id: 14, category: '设备采购', amount: 15000000, description: '硬件设备' },
+    // 项目15
+    { project_id: 15, category: '设备采购', amount: 18000000, description: '智能电网设备' },
+    // 项目16
+    { project_id: 16, category: '工程建设', amount: 30000000, description: '智慧管廊建设' },
+    // 项目17
+    { project_id: 17, category: '设备采购', amount: 15000000, description: '智慧物流设备' },
+    // 项目18
+    { project_id: 18, category: '设备采购', amount: 20000000, description: '机场扩建设备' },
+    // 项目19
+    { project_id: 19, category: '工程建设', amount: 25000000, description: '智慧管廊工程' },
+    // 项目20
+    { project_id: 20, category: '平台开发', amount: 20000000, description: '工业互联网平台' },
+  ]
+
+  budgets.forEach(b => {
+    db.run("INSERT INTO project_budgets (project_id, category, amount, description) VALUES (?, ?, ?, ?)",
+      [b.project_id, b.category, b.amount, b.description])
+  })
+
+  // 项目任务数据
+  const tasks = [
+    // 项目1 - 5个任务
+    { project_id: 1, name: '需求调研', status: '已完成', due_date: '2024-01-31', completed_at: '2024-01-28' },
+    { project_id: 1, name: '方案设计', status: '已完成', due_date: '2024-02-28', completed_at: '2024-02-25' },
+    { project_id: 1, name: '设备采购', status: '进行中', due_date: '2024-05-31' },
+    { project_id: 1, name: '系统部署', status: '待开始', due_date: '2024-08-31' },
+    { project_id: 1, name: '验收交付', status: '待开始', due_date: '2025-06-30' },
+
+    // 项目2 - 4个任务
+    { project_id: 2, name: '场地准备', status: '已完成', due_date: '2024-02-28', completed_at: '2024-02-20' },
+    { project_id: 2, name: '机房装修', status: '已完成', due_date: '2024-04-30', completed_at: '2024-04-25' },
+    { project_id: 2, name: '设备安装', status: '进行中', due_date: '2024-07-31' },
+    { project_id: 2, name: '系统调试', status: '待开始', due_date: '2024-10-31' },
+
+    // 项目3 - 4个任务
+    { project_id: 3, name: '需求分析', status: '已完成', due_date: '2024-04-30', completed_at: '2024-04-20' },
+    { project_id: 3, name: '设备采购', status: '进行中', due_date: '2024-06-30' },
+    { project_id: 3, name: '系统集成', status: '待开始', due_date: '2024-09-30' },
+    { project_id: 3, name: '验收测试', status: '待开始', due_date: '2024-12-31' },
+
+    // 项目4 - 4个任务
+    { project_id: 4, name: '土建施工', status: '已完成', due_date: '2024-05-31', completed_at: '2024-05-15' },
+    { project_id: 4, name: '机电安装', status: '进行中', due_date: '2024-08-31' },
+    { project_id: 4, name: '装修工程', status: '待开始', due_date: '2024-11-30' },
+    { project_id: 4, name: '竣工验收', status: '待开始', due_date: '2025-08-15' },
+
+    // 项目5 - 3个任务
+    { project_id: 5, name: '设备采购', status: '已完成', due_date: '2024-07-31', completed_at: '2024-07-20' },
+    { project_id: 5, name: '软件部署', status: '进行中', due_date: '2024-10-31' },
+    { project_id: 5, name: '系统联调', status: '待开始', due_date: '2024-12-31' },
+
+    // 项目6 - 4个任务
+    { project_id: 6, name: '总体规划', status: '已完成', due_date: '2024-05-31', completed_at: '2024-05-20' },
+    { project_id: 6, name: '基础建设', status: '进行中', due_date: '2024-09-30' },
+    { project_id: 6, name: '设备安装', status: '待开始', due_date: '2024-12-31' },
+    { project_id: 6, name: '验收交付', status: '待开始', due_date: '2025-10-30' },
+
+    // 项目7 - 3个任务
+    { project_id: 7, name: '设备选型', status: '已完成', due_date: '2024-04-30', completed_at: '2024-04-15' },
+    { project_id: 7, name: '设备采购', status: '进行中', due_date: '2024-07-31' },
+    { project_id: 7, name: '系统上线', status: '待开始', due_date: '2024-09-20' },
+
+    // 项目8 - 3个任务
+    { project_id: 8, name: '方案设计', status: '已完成', due_date: '2024-08-31', completed_at: '2024-08-15' },
+    { project_id: 8, name: '设备采购', status: '进行中', due_date: '2024-11-30' },
+    { project_id: 8, name: '系统调试', status: '待开始', due_date: '2025-01-15' },
+
+    // 项目9 (已完成) - 4个任务
+    { project_id: 9, name: '需求调研', status: '已完成', due_date: '2023-07-31', completed_at: '2023-07-20' },
+    { project_id: 9, name: '设备采购', status: '已完成', due_date: '2023-09-30', completed_at: '2023-09-25' },
+    { project_id: 9, name: '系统安装', status: '已完成', due_date: '2023-12-31', completed_at: '2023-12-20' },
+    { project_id: 9, name: '验收交付', status: '已完成', due_date: '2024-06-30', completed_at: '2024-06-28' },
+
+    // 项目10 (已完成) - 3个任务
+    { project_id: 10, name: '规划设计', status: '已完成', due_date: '2023-05-31', completed_at: '2023-05-20' },
+    { project_id: 10, name: '工程建设', status: '已完成', due_date: '2023-12-31', completed_at: '2023-12-25' },
+    { project_id: 10, name: '竣工验收', status: '已完成', due_date: '2024-03-01', completed_at: '2024-02-28' },
+
+    // 项目11 (已完成) - 3个任务
+    { project_id: 11, name: '场馆勘察', status: '已完成', due_date: '2023-03-31', completed_at: '2023-03-20' },
+    { project_id: 11, name: '设备安装', status: '已完成', due_date: '2023-08-31', completed_at: '2023-08-25' },
+    { project_id: 11, name: '系统验收', status: '已完成', due_date: '2024-01-01', completed_at: '2023-12-28' },
+
+    // 项目12 (已完成) - 4个任务
+    { project_id: 12, name: '场地准备', status: '已完成', due_date: '2023-06-30', completed_at: '2023-06-20' },
+    { project_id: 12, name: '机房建设', status: '已完成', due_date: '2023-10-31', completed_at: '2023-10-25' },
+    { project_id: 12, name: '设备部署', status: '已完成', due_date: '2024-02-28', completed_at: '2024-02-20' },
+    { project_id: 12, name: '验收交付', status: '已完成', due_date: '2024-05-31', completed_at: '2024-05-28' },
+
+    // 项目13 (已完成) - 3个任务
+    { project_id: 13, name: '需求分析', status: '已完成', due_date: '2023-05-31', completed_at: '2023-05-20' },
+    { project_id: 13, name: '设备采购', status: '已完成', due_date: '2023-08-31', completed_at: '2023-08-20' },
+    { project_id: 13, name: '系统上线', status: '已完成', due_date: '2024-04-30', completed_at: '2024-04-25' },
+
+    // 项目14 (已暂停) - 3个任务
+    { project_id: 14, name: '平台开发', status: '进行中', due_date: '2024-12-31' },
+    { project_id: 14, name: '硬件部署', status: '待开始', due_date: '2025-03-31' },
+    { project_id: 14, name: '系统集成', status: '待开始', due_date: '2025-06-30' },
+
+    // 项目15 (已暂停) - 3个任务
+    { project_id: 15, name: '设备选型', status: '已完成', due_date: '2024-07-31', completed_at: '2024-07-20' },
+    { project_id: 15, name: '设备采购', status: '已暂停', due_date: '2024-10-31' },
+    { project_id: 15, name: '安装调试', status: '待开始', due_date: '2025-01-31' },
+
+    // 项目16 (已暂停) - 3个任务
+    { project_id: 16, name: '规划设计', status: '已完成', due_date: '2024-06-30', completed_at: '2024-06-15' },
+    { project_id: 16, name: '土建施工', status: '已暂停', due_date: '2024-12-31' },
+    { project_id: 16, name: '设备安装', status: '待开始', due_date: '2025-06-30' },
+
+    // 项目17 (已延期) - 4个任务
+    { project_id: 17, name: '需求调研', status: '已完成', due_date: '2024-03-31', completed_at: '2024-03-20' },
+    { project_id: 17, name: '方案设计', status: '进行中', due_date: '2024-06-30' },
+    { project_id: 17, name: '设备采购', status: '待开始', due_date: '2024-10-31' },
+    { project_id: 17, name: '系统部署', status: '待开始', due_date: '2025-06-30' },
+
+    // 项目18 (已延期) - 3个任务
+    { project_id: 18, name: '项目规划', status: '已完成', due_date: '2024-04-30', completed_at: '2024-04-20' },
+    { project_id: 18, name: '设备采购', status: '进行中', due_date: '2024-09-30' },
+    { project_id: 18, name: '安装调试', status: '待开始', due_date: '2025-08-31' },
+
+    // 项目19 (已延期) - 3个任务
+    { project_id: 19, name: '地质勘察', status: '已完成', due_date: '2024-05-31', completed_at: '2024-05-20' },
+    { project_id: 19, name: '施工设计', status: '进行中', due_date: '2024-08-31' },
+    { project_id: 19, name: '工程建设', status: '待开始', due_date: '2025-09-30' },
+
+    // 项目20 (已延期) - 3个任务
+    { project_id: 20, name: '平台设计', status: '已完成', due_date: '2024-06-30', completed_at: '2024-06-20' },
+    { project_id: 20, name: '开发实施', status: '进行中', due_date: '2024-12-31' },
+    { project_id: 20, name: '测试上线', status: '待开始', due_date: '2025-10-31' },
+  ]
+
+  tasks.forEach(t => {
+    db.run("INSERT INTO project_tasks (project_id, name, status, due_date, completed_at) VALUES (?, ?, ?, ?, ?)",
+      [t.project_id, t.name, t.status, t.due_date, t.completed_at || null])
   })
 }
 
@@ -790,12 +1010,38 @@ function runQuery(sql, params = []) {
 
 // Projects
 ipcMain.handle('db:projects:getAll', () => {
-  return queryAll(`
+  const projects = queryAll(`
     SELECT p.*, c.display_name as city_name, c.lat, c.lon
     FROM projects p
     LEFT JOIN cities c ON p.city_id = c.id
     ORDER BY p.created_at DESC
   `)
+
+  // Add task progress and budget info to each project
+  projects.forEach(project => {
+    // Task progress
+    const tasks = queryAll(`
+      SELECT COUNT(*) as total,
+             SUM(CASE WHEN status = '已完成' THEN 1 ELSE 0 END) as completed
+      FROM project_tasks
+      WHERE project_id = ?
+    `, [project.id])
+    const totalTasks = tasks[0]?.total || 0
+    const completedTasks = tasks[0]?.completed || 0
+    project.total_tasks = totalTasks
+    project.completed_tasks = completedTasks
+    project.task_progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+
+    // Budget info
+    const budgets = queryAll(`
+      SELECT COALESCE(SUM(amount), 0) as total_budget
+      FROM project_budgets
+      WHERE project_id = ?
+    `, [project.id])
+    project.total_budget = budgets[0]?.total_budget || 0
+  })
+
+  return projects
 })
 
 ipcMain.handle('db:projects:create', (_, data) => {
@@ -816,22 +1062,38 @@ ipcMain.handle('db:projects:delete', (_, id) => {
 
 // Contracts
 ipcMain.handle('db:contracts:getAll', () => {
-  return queryAll(`
+  // Get contracts with payment progress
+  const contracts = queryAll(`
     SELECT c.*, p.name as project_name
     FROM contracts c
     LEFT JOIN projects p ON c.project_id = p.id
     ORDER BY c.created_at DESC
   `)
+
+  // Get payment amounts for each contract
+  contracts.forEach(contract => {
+    const payments = queryAll(`
+      SELECT COALESCE(SUM(pay.amount), 0) as paid_amount
+      FROM payments pay
+      JOIN invoices inv ON pay.invoice_id = inv.id
+      WHERE inv.contract_id = ?
+    `, [contract.id])
+    contract.paid_amount = payments[0]?.paid_amount || 0
+    contract.payment_status = contract.paid_amount >= contract.amount ? '已收款' :
+      contract.paid_amount > 0 ? '部分收款' : '未收款'
+  })
+
+  return contracts
 })
 
 ipcMain.handle('db:contracts:create', (_, data) => {
-  return runQuery('INSERT INTO contracts (project_id, name, contract_type, amount, signed_date) VALUES (?, ?, ?, ?, ?)',
-    [data.project_id, data.name, data.contract_type || '销售合同', data.amount, data.signed_date])
+  return runQuery('INSERT INTO contracts (project_id, code, name, contract_type, amount, signed_date) VALUES (?, ?, ?, ?, ?, ?)',
+    [data.project_id, data.code || '', data.name, data.contract_type || '销售合同', data.amount, data.signed_date])
 })
 
 ipcMain.handle('db:contracts:update', (_, data) => {
-  runQuery('UPDATE contracts SET project_id = ?, name = ?, contract_type = ?, amount = ?, signed_date = ? WHERE id = ?',
-    [data.project_id, data.name, data.contract_type, data.amount, data.signed_date, data.id])
+  runQuery('UPDATE contracts SET project_id = ?, code = ?, name = ?, contract_type = ?, amount = ?, signed_date = ? WHERE id = ?',
+    [data.project_id, data.code || '', data.name, data.contract_type, data.amount, data.signed_date, data.id])
   return data
 })
 
@@ -842,12 +1104,27 @@ ipcMain.handle('db:contracts:delete', (_, id) => {
 
 // Invoices
 ipcMain.handle('db:invoices:getAll', () => {
-  return queryAll(`
-    SELECT i.*, c.name as contract_name
+  const invoices = queryAll(`
+    SELECT i.*, c.name as contract_name, c.project_id
     FROM invoices i
     LEFT JOIN contracts c ON i.contract_id = c.id
     ORDER BY i.created_at DESC
   `)
+
+  // Add payment status to each invoice
+  invoices.forEach(invoice => {
+    const payments = queryAll(`
+      SELECT COALESCE(SUM(amount), 0) as paid_amount
+      FROM payments
+      WHERE invoice_id = ?
+    `, [invoice.id])
+    const paidAmount = payments[0]?.paid_amount || 0
+    invoice.paid_amount = paidAmount
+    invoice.payment_status = paidAmount >= invoice.amount ? '已收款' :
+      paidAmount > 0 ? '部分收款' : '未收款'
+  })
+
+  return invoices
 })
 
 ipcMain.handle('db:invoices:create', (_, data) => {
@@ -895,26 +1172,100 @@ ipcMain.handle('db:payments:delete', (_, id) => {
 // Acceptances
 ipcMain.handle('db:acceptances:getAll', () => {
   return queryAll(`
-    SELECT a.*, p.name as project_name
+    SELECT a.*, p.name as project_name, t.name as task_name
     FROM acceptances a
     LEFT JOIN projects p ON a.project_id = p.id
+    LEFT JOIN project_tasks t ON a.task_id = t.id
     ORDER BY a.created_at DESC
   `)
 })
 
 ipcMain.handle('db:acceptances:create', (_, data) => {
-  return runQuery('INSERT INTO acceptances (project_id, name, status, date) VALUES (?, ?, ?, ?)',
-    [data.project_id, data.name, data.status || '待验收', data.date])
+  return runQuery('INSERT INTO acceptances (project_id, task_id, name, status, date) VALUES (?, ?, ?, ?, ?)',
+    [data.project_id, data.task_id || null, data.name, data.status || '待验收', data.date])
 })
 
 ipcMain.handle('db:acceptances:update', (_, data) => {
-  runQuery('UPDATE acceptances SET project_id = ?, name = ?, status = ?, date = ? WHERE id = ?',
-    [data.project_id, data.name, data.status, data.date, data.id])
+  runQuery('UPDATE acceptances SET project_id = ?, task_id = ?, name = ?, status = ?, date = ? WHERE id = ?',
+    [data.project_id, data.task_id || null, data.name, data.status, data.date, data.id])
   return data
 })
 
 ipcMain.handle('db:acceptances:delete', (_, id) => {
   runQuery('DELETE FROM acceptances WHERE id = ?', [id])
+  return { success: true }
+})
+
+// Project Budgets
+ipcMain.handle('db:budgets:getAll', () => {
+  return queryAll(`
+    SELECT b.*, p.name as project_name
+    FROM project_budgets b
+    LEFT JOIN projects p ON b.project_id = p.id
+    ORDER BY b.created_at DESC
+  `)
+})
+
+ipcMain.handle('db:budgets:getByProject', (_, projectId) => {
+  return queryAll(`
+    SELECT b.*, p.name as project_name
+    FROM project_budgets b
+    LEFT JOIN projects p ON b.project_id = p.id
+    WHERE b.project_id = ?
+    ORDER BY b.created_at DESC
+  `, [projectId])
+})
+
+ipcMain.handle('db:budgets:create', (_, data) => {
+  return runQuery('INSERT INTO project_budgets (project_id, category, amount, description) VALUES (?, ?, ?, ?)',
+    [data.project_id, data.category, data.amount, data.description || ''])
+})
+
+ipcMain.handle('db:budgets:update', (_, data) => {
+  runQuery('UPDATE project_budgets SET project_id = ?, category = ?, amount = ?, description = ? WHERE id = ?',
+    [data.project_id, data.category, data.amount, data.description, data.id])
+  return data
+})
+
+ipcMain.handle('db:budgets:delete', (_, id) => {
+  runQuery('DELETE FROM project_budgets WHERE id = ?', [id])
+  return { success: true }
+})
+
+// Project Tasks
+ipcMain.handle('db:tasks:getAll', () => {
+  return queryAll(`
+    SELECT t.*, p.name as project_name
+    FROM project_tasks t
+    LEFT JOIN projects p ON t.project_id = p.id
+    ORDER BY t.created_at DESC
+  `)
+})
+
+ipcMain.handle('db:tasks:getByProject', (_, projectId) => {
+  return queryAll(`
+    SELECT t.*, p.name as project_name
+    FROM project_tasks t
+    LEFT JOIN projects p ON t.project_id = p.id
+    WHERE t.project_id = ?
+    ORDER BY t.created_at DESC
+  `, [projectId])
+})
+
+ipcMain.handle('db:tasks:create', (_, data) => {
+  return runQuery('INSERT INTO project_tasks (project_id, name, status, due_date) VALUES (?, ?, ?, ?)',
+    [data.project_id, data.name, data.status || '待开始', data.due_date || null])
+})
+
+ipcMain.handle('db:tasks:update', (_, data) => {
+  const completed_at = data.status === '已完成' ? new Date().toISOString() : null
+  runQuery('UPDATE project_tasks SET project_id = ?, name = ?, status = ?, due_date = ?, completed_at = ? WHERE id = ?',
+    [data.project_id, data.name, data.status, data.due_date, completed_at, data.id])
+  return data
+})
+
+ipcMain.handle('db:tasks:delete', (_, id) => {
+  runQuery('DELETE FROM project_tasks WHERE id = ?', [id])
   return { success: true }
 })
 
