@@ -1017,6 +1017,12 @@ const projectSubTabs = [
 
 const selectSubTab = (key) => {
   activeSubTab.value = key
+  // Load data when switching to budgets or tasks tabs
+  if (key === 'budgets' && selectedItem.value) {
+    loadProjectBudgets(selectedItem.value.id)
+  } else if (key === 'tasks' && selectedItem.value) {
+    loadProjectTasks(selectedItem.value.id)
+  }
 }
 
 const formatAmount = (amount) => {
@@ -2088,15 +2094,16 @@ onMounted(() => {
 
 /* Contract Detail Panel */
 .contract-detail-panel {
-  position: absolute;
+  position: fixed;
   right: 0;
   top: 0;
-  height: 100%;
+  height: 100vh;
+  width: 320px;
   background: rgba(8, 18, 36, 0.98);
   border-left: 1px solid rgba(100, 150, 255, 0.2);
   display: flex;
   flex-direction: column;
-  z-index: 20;
+  z-index: 60;
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.4);
 }
 
