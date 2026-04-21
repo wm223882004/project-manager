@@ -21,6 +21,23 @@
         <span>显示项目</span>
       </label>
     </div>
+    <div class="status-filter" v-if="showProjectMarkers">
+      <span class="filter-label">状态筛选:</span>
+      <button
+        v-for="status in projectStatuses"
+        :key="status"
+        :class="['filter-btn', status, { active: activeStatusFilter.includes(status) }]"
+        @click="toggleStatusFilter(status)"
+      >
+        {{ status }}
+      </button>
+      <button
+        :class="['filter-btn', 'all', { active: activeStatusFilter.length === 0 }]"
+        @click="activeStatusFilter = []"
+      >
+        全部
+      </button>
+    </div>
   </div>
 </template>
 
@@ -42,6 +59,18 @@ const showLabels = ref(true)
 const showProjectMarkers = ref(true)
 const autoRotate = ref(true)
 const hoveredProject = ref(null)
+const projectStatuses = ['进行中', '已完成', '已暂停', '已延期']
+const activeStatusFilter = ref([])
+
+const toggleStatusFilter = (status) => {
+  const index = activeStatusFilter.value.indexOf(status)
+  if (index === -1) {
+    activeStatusFilter.value.push(status)
+  } else {
+    activeStatusFilter.value.splice(index, 1)
+  }
+  filterProjectMarkers()
+}
 let scene, camera, renderer, controls, earth, labelSprites = []
 let projectMarkers = []
 let animationId
@@ -523,6 +552,17 @@ const clearProjectMarkers = () => {
   projectMarkers = []
 }
 
+const filterProjectMarkers = () => {
+  projectMarkers.forEach(sprite => {
+    const project = sprite.userData.project
+    if (activeStatusFilter.value.length === 0) {
+      sprite.visible = true
+    } else {
+      sprite.visible = activeStatusFilter.value.includes(project.status)
+    }
+  })
+}
+
 const createProjectMarkers = () => {
   console.log('[Earth3D] createProjectMarkers called, projects:', props.projects.length, 'showProjectMarkers:', showProjectMarkers.value)
   clearProjectMarkers()
@@ -764,6 +804,74 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   cursor: pointer;
+}
+
+.status-filter {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 20, 40, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 13px;
+}
+
+.filter-label {
+  color: rgba(255, 255, 255, 0.7);
+  margin-right: 4px;
+}
+
+.filter-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.filter-btn.active {
+  background: rgba(74, 144, 217, 0.4);
+  border-color: rgba(74, 144, 217, 0.6);
+  color: #fff;
+}
+
+.filter-btn.进行中.active {
+  background: rgba(74, 144, 217, 0.4);
+  border-color: rgba(74, 144, 217, 0.6);
+}
+
+.filter-btn.已完成.active {
+  background: rgba(72, 187, 120, 0.4);
+  border-color: rgba(72, 187, 120, 0.6);
+}
+
+.filter-btn.已暂停.active {
+  background: rgba(237, 137, 54, 0.4);
+  border-color: rgba(237, 137, 54, 0.6);
+}
+
+.filter-btn.已延期.active {
+  background: rgba(237, 100, 100, 0.4);
+  border-color: rgba(237, 100, 100, 0.6);
+}
+
+.filter-btn.all.active {
+  background: rgba(100, 150, 255, 0.4);
+  border-color: rgba(100, 150, 255, 0.6);
 }
 
 .project-tooltip {
