@@ -1,5 +1,5 @@
 <template>
-  <div class="sidebar-wrapper" :class="{ expanded: activeModule && !panelCollapsed }">
+  <div class="sidebar-wrapper" :class="{ expanded: (activeModule && !panelCollapsed) || showListPanel }">
     <button
       class="toggle-btn"
       @click="toggleSidebar"
@@ -367,7 +367,7 @@
     <div
       class="sidebar-panel"
       :style="{ width: sidebarWidth + 'px' }"
-      v-if="activeModule && !panelCollapsed"
+      v-if="activeModule && showListPanel"
     >
       <div class="panel-header">
         <h3>{{ currentLabel }}</h3>
@@ -651,6 +651,7 @@ const emit = defineEmits(['select', 'update:sidebarWidth', 'update:sidebarOffset
 
 const sidebarCollapsed = ref(true)
 const panelCollapsed = ref(false)
+const showListPanel = ref(false)
 const showForm = ref(false)
 const formAction = ref('')
 const showDeleteConfirm = ref(false)
@@ -1033,11 +1034,13 @@ const formatAmount = (amount) => {
 const handleTabClick = (key) => {
   if (panelCollapsed.value) {
     panelCollapsed.value = false
+    showListPanel.value = true
     emit('select', key)
     loadModuleData(key)
   } else if (props.activeModule === key) {
     closePanel()
   } else {
+    showListPanel.value = true
     emit('select', key)
     loadModuleData(key)
   }
@@ -1057,13 +1060,15 @@ const loadModuleData = (key) => {
 const toggleSidebar = () => {
   if (panelCollapsed.value) {
     panelCollapsed.value = false
+    showListPanel.value = true
   } else {
     panelCollapsed.value = true
+    showListPanel.value = false
   }
 }
 
 const closePanel = () => {
-  panelCollapsed.value = true
+  showListPanel.value = false
 }
 
 const getDefaultFormData = () => {
@@ -1212,6 +1217,7 @@ watch(() => props.activeModule, () => {
 watch(panelCollapsed, (val) => {
   if (val) {
     showDetailView.value = false
+    showListPanel.value = false
     selectedContract.value = null
     selectedInvoice.value = null
     selectedPayment.value = null
@@ -1249,7 +1255,7 @@ watch(panelCollapsed, () => {
 
 const updateSidebarOffset = () => {
   const tabsWidth = 52
-  const sidebarPanelWidth = (props.activeModule && !panelCollapsed.value) ? 200 : 0
+  const sidebarPanelWidth = (props.activeModule && showListPanel.value) ? 200 : 0
   // detail-panel 是 fixed 定位，覆盖在地球上，不需要计入偏移量
   const totalOffset = tabsWidth + sidebarPanelWidth
   emit('update:sidebarOffset', totalOffset)
