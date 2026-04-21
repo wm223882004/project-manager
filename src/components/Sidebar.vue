@@ -857,6 +857,8 @@ const selectItem = (item) => {
     loadProjectInvoices(item.id)
     loadProjectBudgets(item.id)
     loadProjectTasks(item.id)
+  } else if (props.activeModule === 'contracts') {
+    selectedContract.value = item
   } else if (props.activeModule === 'invoices') {
     selectedInvoice.value = item
   } else if (props.activeModule === 'payments') {
