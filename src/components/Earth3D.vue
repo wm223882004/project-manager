@@ -33,7 +33,7 @@
       </button>
       <button
         :class="['filter-btn', 'all', { active: activeStatusFilter.length === 0 }]"
-        @click="activeStatusFilter = []"
+        @click="clearStatusFilter"
       >
         全部
       </button>
@@ -69,6 +69,11 @@ const toggleStatusFilter = (status) => {
   } else {
     activeStatusFilter.value.splice(index, 1)
   }
+  filterProjectMarkers()
+}
+
+const clearStatusFilter = () => {
+  activeStatusFilter.value = []
   filterProjectMarkers()
 }
 let scene, camera, renderer, controls, earth, labelSprites = []
