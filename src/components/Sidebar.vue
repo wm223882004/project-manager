@@ -1220,7 +1220,7 @@ const startDetailPanelResize = (e) => {
 
 const doDetailPanelResize = (e) => {
   if (!isDetailPanelResizing) return
-  const newWidth = Math.max(240, Math.min(500, e.clientX))
+  const newWidth = Math.max(240, Math.min(500, window.innerWidth - e.clientX))
   detailPanelWidth.value = newWidth
 }
 
