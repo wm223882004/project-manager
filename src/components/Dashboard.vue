@@ -182,6 +182,7 @@ const projects = ref([])
 const tasks = ref([])
 const budgets = ref([])
 const expenses = ref([])
+const contracts = ref([])
 
 const stats = computed(() => {
   const total = projects.value.length
@@ -190,11 +191,17 @@ const stats = computed(() => {
   const paused = projects.value.filter(p => p.status === '已暂停').length
   const delayed = projects.value.filter(p => p.status === '已延期').length
 
-  // 计算总收入（合同金额）
-  const totalIncome = projects.value.reduce((sum, p) => sum + (p.total_budget || 0), 0)
+  // 计算总收入（销售合同金额）
+  const totalIncome = contracts.value
+    .filter(c => c.contract_type === '销售合同')
+    .reduce((sum, c) => sum + Number(c.amount || 0), 0)
 
-  // 计算总支出（管理费用合计）
-  const totalExpense = expenses.value.reduce((sum, e) => sum + Number(e.amount || 0), 0)
+  // 计算总支出（采购/施工/服务合同 + 管理费用）
+  const contractExpense = contracts.value
+    .filter(c => c.contract_type !== '销售合同')
+    .reduce((sum, c) => sum + Number(c.amount || 0), 0)
+  const managementExpense = expenses.value.reduce((sum, e) => sum + Number(e.amount || 0), 0)
+  const totalExpense = contractExpense + managementExpense
 
   // 任务统计
   const totalTasks = tasks.value.length
@@ -277,13 +284,17 @@ const loadData = async () => {
     tasks.value = await window.electronAPI.getTasks()
     budgets.value = await window.electronAPI.getBudgets()
     expenses.value = await window.electronAPI.getManagementFees()
+    contracts.value = await window.electronAPI.getContracts()
 
-    // Calculate total expense per project
+    // Calculate total expense per project (contracts + management fees)
     projects.value.forEach(project => {
-      const projectExpense = expenses.value
+      const projectContractExpense = contracts.value
+        .filter(c => c.project_id === project.id && c.contract_type !== '销售合同')
+        .reduce((sum, c) => sum + Number(c.amount || 0), 0)
+      const projectManagementExpense = expenses.value
         .filter(e => e.project_id === project.id)
         .reduce((sum, e) => sum + Number(e.amount || 0), 0)
-      project.total_expense = projectExpense
+      project.total_expense = projectContractExpense + projectManagementExpense
     })
   } catch (err) {
     console.error('Failed to load dashboard data:', err)
@@ -292,6 +303,10 @@ const loadData = async () => {
 
 onMounted(() => {
   loadData()
+})
+
+defineExpose({
+  refresh: loadData
 })
 </script>
 

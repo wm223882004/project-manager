@@ -89,6 +89,24 @@
               </div>
             </div>
           </div>
+          <!-- 其他合同 -->
+          <div class="contract-category" v-if="otherContracts.length > 0">
+            <div class="category-title">其他合同</div>
+            <div class="contract-list">
+              <div
+                v-for="c in otherContracts"
+                :key="c.id"
+                :class="['contract-item', { selected: selectedContract && selectedContract.id === c.id }]"
+                @click="selectContract(c)"
+              >
+                <div class="contract-info">
+                  <span class="contract-name">{{ c.name }}</span>
+                  <span class="contract-type">{{ c.contract_type }}</span>
+                </div>
+                <span class="contract-amount">¥{{ formatAmount(c.amount) }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="detail-section" v-if="activeSubTab === 'invoices'">
@@ -108,6 +126,7 @@
               >
                 <div class="contract-info">
                   <span class="contract-name">{{ i.invoice_no }}</span>
+                  <span class="contract-type">{{ i.payment_status === '已收款' || i.payment_status === '部分收款' ? '有凭证' : '无凭证' }}</span>
                 </div>
                 <span class="contract-amount">¥{{ formatAmount(i.amount) }}</span>
               </div>
@@ -125,6 +144,7 @@
               >
                 <div class="contract-info">
                   <span class="contract-name">{{ i.invoice_no }}</span>
+                  <span class="contract-type">{{ i.payment_status === '已收款' || i.payment_status === '部分收款' ? '有凭证' : '无凭证' }}</span>
                 </div>
                 <span class="contract-amount">¥{{ formatAmount(i.amount) }}</span>
               </div>
@@ -190,7 +210,14 @@
                 <span class="contract-name">{{ t.name }}</span>
                 <span class="contract-type">{{ t.responsible_person || '未指定负责人' }} · {{ t.due_date || '无截止日期' }}</span>
               </div>
-              <span :class="['task-status', t.status]">{{ t.status }}</span>
+              <div class="task-actions">
+                <span :class="['task-status', t.status]">{{ t.status }}</span>
+                <button
+                  v-if="t.status !== '已完成'"
+                  class="task-toggle-btn"
+                  @click.stop="toggleTaskStatus(t)"
+                >完成</button>
+              </div>
             </div>
           </div>
         </div>
@@ -216,6 +243,41 @@
             <span class="info-label">项目状态</span>
             <span :class="['info-status', selectedItem.status]">{{ selectedItem.status }}</span>
           </div>
+
+          <!-- 财务概览 -->
+          <div class="budget-overview">
+            <div class="budget-header">
+              <span class="budget-title">财务概览</span>
+              <span v-if="expenseWarning.level !== 'none'" :class="['warning-badge', expenseWarning.level]">{{ expenseWarning.message }}</span>
+            </div>
+            <div class="budget-summary">
+              <div class="budget-row">
+                <span class="budget-label">合同收入</span>
+                <span class="budget-value income-value">+¥{{ formatAmount(contractIncome) }}</span>
+              </div>
+              <div class="budget-row expense">
+                <span class="budget-label">合同支出</span>
+                <span class="budget-value expense-value">-¥{{ formatAmount(contractExpense) }}</span>
+              </div>
+              <div class="budget-row expense">
+                <span class="budget-label">管理费用支出</span>
+                <span class="budget-value expense-value">-¥{{ formatAmount(totalManagementFees) }}</span>
+              </div>
+            </div>
+            <div class="budget-progress-container" style="margin-top: 12px;">
+              <div class="budget-progress-bar">
+                <div
+                  class="budget-progress-fill"
+                  :class="expenseWarning.level === 'none' ? 'green' : expenseWarning.level"
+                  :style="{ width: totalBudget > 0 ? Math.min(100, Math.round(((contractExpense + totalManagementFees) / totalBudget) * 100)) + '%' : '0%' }"
+                ></div>
+              </div>
+              <div class="budget-progress-labels">
+                <span>支出占比 {{ totalBudget > 0 ? Math.round(((contractExpense + totalManagementFees) / totalBudget) * 100) : 0 }}%</span>
+              </div>
+            </div>
+          </div>
+
           <div class="budget-overview">
             <div class="budget-header">
               <span class="budget-title">预算概览</span>
@@ -226,8 +288,8 @@
                 <span class="budget-value">¥{{ formatAmount(totalBudget) }}</span>
               </div>
               <div class="budget-row expense">
-                <span class="budget-label">管理费用</span>
-                <span class="budget-value expense-value">-¥{{ formatAmount(totalManagementFees) }}</span>
+                <span class="budget-label">已支出</span>
+                <span class="budget-value expense-value">-¥{{ formatAmount(contractExpense + totalManagementFees) }}</span>
               </div>
               <div class="budget-row total">
                 <span class="budget-label">剩余预算</span>
@@ -682,6 +744,8 @@
             <select v-model="formData.contract_type">
               <option value="销售合同">销售合同</option>
               <option value="采购合同">采购合同</option>
+              <option value="施工合同">施工合同</option>
+              <option value="服务合同">服务合同</option>
             </select>
           </div>
           <div class="form-group">
@@ -876,7 +940,7 @@
         </template>
 
         <div class="form-group" v-if="showDeleteConfirm">
-          <label>确认删除此{{ moduleName }}吗？</label>
+          <label>确认删除此{{ formModuleName }}吗？</label>
           <div class="confirm-text">此操作不可撤销</div>
         </div>
         <div class="form-actions">
@@ -941,7 +1005,7 @@ const projectBudgets = ref([])
 const projectTasks = ref([])
 const projectManagementFees = ref([])
 const contractInvoices = ref([])
-const activeSubTab = ref('contracts')
+const activeSubTab = ref('info')
 
 const salesContracts = computed(() => {
   return projectContracts.value.filter(c => c.contract_type === '销售合同')
@@ -951,6 +1015,10 @@ const purchaseContracts = computed(() => {
   return projectContracts.value.filter(c => c.contract_type === '采购合同')
 })
 
+const otherContracts = computed(() => {
+  return projectContracts.value.filter(c => c.contract_type !== '销售合同' && c.contract_type !== '采购合同')
+})
+
 // 收款发票和付款发票
 const receiptInvoices = computed(() => {
   return projectInvoices.value.filter(i => i.invoice_type === '收款')
@@ -958,6 +1026,19 @@ const receiptInvoices = computed(() => {
 
 const paymentInvoices = computed(() => {
   return projectInvoices.value.filter(i => i.invoice_type === '付款')
+})
+
+// 合同收入/支出计算
+const contractIncome = computed(() => {
+  return projectContracts.value
+    .filter(c => c.contract_type === '销售合同')
+    .reduce((sum, c) => sum + Number(c.amount || 0), 0)
+})
+
+const contractExpense = computed(() => {
+  return projectContracts.value
+    .filter(c => c.contract_type !== '销售合同')
+    .reduce((sum, c) => sum + Number(c.amount || 0), 0)
 })
 
 // 预算概览计算
@@ -998,6 +1079,18 @@ const getBudgetRemainingPercent = (ratio) => {
   return Math.round(ratio * 100)
 }
 
+// 费用预警
+const expenseWarning = computed(() => {
+  const totalExpense = contractExpense.value + totalManagementFees.value
+  if (totalBudget.value === 0) return { level: 'none', message: '' }
+  const ratio = totalExpense / totalBudget.value
+  if (ratio > 1) return { level: 'red', message: `费用超支 ${formatAmount(Math.round((ratio - 1) * 100))}%` }
+  if (ratio > 0.9) return { level: 'red', message: '费用即将超支（90%+）' }
+  if (ratio > 0.75) return { level: 'orange', message: '费用预警（75%+）' }
+  if (ratio > 0.5) return { level: 'yellow', message: '费用较高（50%+）' }
+  return { level: 'none', message: '' }
+})
+
 // 根据模块获取数据
 const currentData = computed(() => {
   switch (props.activeModule) {
@@ -1017,7 +1110,7 @@ const filteredItems = computed(() => {
   if (!searchKeyword.value) return currentData.value
   const kw = searchKeyword.value.toLowerCase()
   return currentData.value.filter(item => {
-    const name = item.name || item.invoice_no || ''
+    const name = item.name || item.invoice_no || item.receipt_no || item.category || ''
     return name.toLowerCase().includes(kw)
   })
 })
@@ -1063,19 +1156,19 @@ const moduleName = computed(() => {
 
 const getItemSub = (item) => {
   if (props.activeModule === 'contracts') {
-    return item.project_name ? `项目: ${item.project_name}` : (item.amount ? `¥${item.amount}` : '')
+    return item.project_name ? `项目: ${item.project_name}` : (item.amount !== undefined ? `¥${formatAmount(item.amount)}` : '')
   }
   if (props.activeModule === 'invoices') {
-    return item.contract_name ? `合同: ${item.contract_name}` : (item.amount ? `¥${item.amount}` : '')
+    return item.contract_name ? `合同: ${item.contract_name}` : (item.amount !== undefined ? `¥${formatAmount(item.amount)}` : '')
   }
   if (props.activeModule === 'payments') {
-    return item.invoice_no ? `发票: ${item.invoice_no}` : (item.amount ? `¥${item.amount}` : '')
+    return item.invoice_no ? `发票: ${item.invoice_no}` : (item.amount !== undefined ? `¥${formatAmount(item.amount)}` : '')
   }
   if (props.activeModule === 'acceptances') {
     return item.project_name ? `项目: ${item.project_name}` : ''
   }
   if (props.activeModule === 'management_fees') {
-    return item.project_name ? `项目: ${item.project_name}` : (item.amount ? `¥${item.amount}` : '')
+    return item.project_name ? `项目: ${item.project_name}` : (item.amount !== undefined ? `¥${formatAmount(item.amount)}` : '')
   }
   if (props.activeModule === 'people') {
     return item.position || ''
@@ -1098,9 +1191,24 @@ const currentLabel = computed(() => {
   return menuItems.find(m => m.key === props.activeModule)?.label || ''
 })
 
+const formModuleName = computed(() => {
+  switch (formModule.value) {
+    case 'projects': return '项目'
+    case 'contracts': return '合同'
+    case 'invoices': return '发票'
+    case 'payments': return '付款'
+    case 'acceptances': return '验收'
+    case 'budgets': return '预算'
+    case 'tasks': return '任务'
+    case 'management_fees': return '管理费用'
+    case 'people': return '人员'
+    default: return moduleName.value
+  }
+})
+
 const formTitle = computed(() => {
-  if (showDeleteConfirm.value) return `删除${moduleName.value}`
-  return formAction.value === 'add' ? `新增${moduleName.value}` : `修改${moduleName.value}`
+  if (showDeleteConfirm.value) return `删除${formModuleName.value}`
+  return formAction.value === 'add' ? `新增${formModuleName.value}` : `修改${formModuleName.value}`
 })
 
 const loadProjects = async () => {
@@ -1186,7 +1294,8 @@ const getSelectedItemForModule = (item) => {
   return selectedItem.value && selectedItem.value.id === item.id
 }
 
-const selectItem = (item, module) => {
+const selectItem = async (item, module) => {
+  if (!item && module === 'projects') return
   console.log('[selectItem] module:', module, 'item:', item?.name || item?.id)
   // 先重置所有详情状态，避免模块间状态污染
   selectedItem.value = null
@@ -1201,8 +1310,8 @@ const selectItem = (item, module) => {
   if (module === 'projects') {
     selectedItem.value = item
     showDetailView.value = true
-    activeSubTab.value = 'contracts'
-    loadProjectContracts(item.id)
+    activeSubTab.value = 'info'
+    await loadProjectContracts(item.id)
     loadProjectInvoices(item.id)
     loadProjectBudgets(item.id)
     loadProjectTasks(item.id)
@@ -1263,8 +1372,25 @@ const loadProjectTasks = async (projectId) => {
   }
 }
 
+const toggleTaskStatus = async (task) => {
+  try {
+    const newStatus = task.status === '已完成' ? '进行中' : '已完成'
+    await window.electronAPI.updateTask({ ...task, status: newStatus })
+    if (selectedItem.value) {
+      loadProjectTasks(selectedItem.value.id)
+    }
+  } catch (err) {
+    console.error('Failed to update task status:', err)
+  }
+}
+
 const selectContract = (contract) => {
   selectedContract.value = contract
+  selectedInvoice.value = null
+  selectedPayment.value = null
+  selectedAcceptance.value = null
+  selectedManagementFee.value = null
+  selectedPerson.value = null
   loadContractInvoices(contract.id)
 }
 
@@ -1279,6 +1405,7 @@ const loadContractInvoices = async (contractId) => {
 
 const closeContractDetail = () => {
   selectedContract.value = null
+  contractInvoices.value = []
 }
 
 const handleContractAction = (action) => {
@@ -1393,6 +1520,7 @@ const closeDetailView = () => {
   selectedAcceptance.value = null
   selectedManagementFee.value = null
   selectedPerson.value = null
+  closeForm()
 }
 
 const handleDetailAction = (action) => {
@@ -1437,19 +1565,20 @@ const handleDetailAction = (action) => {
     showForm.value = true
   } else if (action === 'deleteProject') {
     formAction.value = 'delete'
-    formModule.value = props.activeModule
+    formModule.value = 'projects'
     showDeleteConfirm.value = true
+    formData.value = { ...selectedItem.value }
     showForm.value = true
   }
 }
 
 const projectSubTabs = [
+  { key: 'info', label: '信息' },
   { key: 'contracts', label: '合同' },
   { key: 'invoices', label: '发票' },
   { key: 'budgets', label: '预算' },
   { key: 'management_fees', label: '管理费用' },
-  { key: 'tasks', label: '任务' },
-  { key: 'info', label: '信息' }
+  { key: 'tasks', label: '任务' }
 ]
 
 const selectSubTab = (key) => {
@@ -1489,6 +1618,7 @@ const handleTabClick = (key) => {
     selectedAcceptance.value = null
     selectedManagementFee.value = null
     selectedPerson.value = null
+    closeForm()
     return
   }
   if (panelCollapsed.value) {
@@ -1529,10 +1659,13 @@ const toggleSidebar = () => {
 
 const closePanel = () => {
   showListPanel.value = false
+  emit('select', null)
+  closeForm()
 }
 
 const getDefaultFormData = () => {
-  switch (props.activeModule) {
+  const mod = formModule.value || props.activeModule
+  switch (mod) {
     case 'projects':
       return { name: '', code: '', city_id: null, cityObj: null, start_date: '', end_date: '', status: '进行中', manager: '' }
     case 'contracts':
@@ -1543,6 +1676,10 @@ const getDefaultFormData = () => {
       return { invoice_id: '', amount: '', date: '', receipt_no: '' }
     case 'acceptances':
       return { project_id: '', name: '', status: '待验收', date: '' }
+    case 'budgets':
+      return { project_id: '', category: '', amount: '', description: '' }
+    case 'tasks':
+      return { project_id: '', name: '', status: '进行中', responsible_person: '', due_date: '' }
     case 'management_fees':
       return { project_id: '', category: '', amount: '', responsible_person: '', fee_date: '', description: '' }
     case 'people':
@@ -1552,20 +1689,41 @@ const getDefaultFormData = () => {
   }
 }
 
+const getSelectedItemForAction = () => {
+  const mod = props.activeModule || formModule.value
+  if (mod === 'projects') return selectedItem.value
+  if (mod === 'contracts') return selectedContract.value
+  if (mod === 'invoices') return selectedInvoice.value
+  if (mod === 'payments') return selectedPayment.value
+  if (mod === 'acceptances') return selectedAcceptance.value
+  if (mod === 'management_fees') return selectedManagementFee.value
+  if (mod === 'people') return selectedPerson.value
+  return selectedItem.value
+}
+
 const handleAction = (action) => {
   formAction.value = action
-  formModule.value = props.activeModule
+  formModule.value = props.activeModule || formModule.value
   showDeleteConfirm.value = false
+  const currentItem = getSelectedItemForAction()
   if (action === 'add') {
     formData.value = getDefaultFormData()
     selectedItem.value = null
-  } else if (action === 'edit' && selectedItem.value) {
-    formData.value = { ...selectedItem.value }
+    showForm.value = true
+  } else if (action === 'edit' && currentItem) {
+    formData.value = { ...currentItem }
     if (formData.value.cityObj === undefined) {
       formData.value.cityObj = null
     }
+    if (formData.value.locationObj === undefined) {
+      formData.value.locationObj = {}
+    }
+    showForm.value = true
+  } else if (action === 'delete' && currentItem) {
+    formData.value = { ...currentItem }
+    showDeleteConfirm.value = true
+    showForm.value = true
   }
-  showForm.value = true
 }
 
 const closeForm = () => {
@@ -1703,6 +1861,7 @@ watch(() => props.activeModule, () => {
   selectedAcceptance.value = null
   selectedPerson.value = null
   searchKeyword.value = ''
+  closeForm()
   formData.value = getDefaultFormData()
   updateSidebarOffset()
 })
@@ -1716,6 +1875,7 @@ watch(panelCollapsed, (val) => {
     selectedPayment.value = null
     selectedAcceptance.value = null
     selectedPerson.value = null
+    closeForm()
   }
   updateSidebarOffset()
 })
@@ -2526,8 +2686,7 @@ onMounted(() => {
 }
 
 .contract-list {
-  max-height: 200px;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .contract-item {
@@ -2650,6 +2809,28 @@ onMounted(() => {
   color: #48bb78;
 }
 
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-toggle-btn {
+  background: rgba(74, 144, 217, 0.2);
+  border: 1px solid rgba(74, 144, 217, 0.4);
+  color: #4a90d9;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.task-toggle-btn:hover {
+  background: rgba(74, 144, 217, 0.4);
+  color: #fff;
+}
+
 .contract-item.completed {
   opacity: 0.7;
 }
@@ -2708,7 +2889,33 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.budget-value.income-value {
+  color: #48bb78;
+}
+
 .budget-value.expense-value {
+  color: #ef6461;
+}
+
+.warning-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.warning-badge.yellow {
+  background: rgba(247, 201, 72, 0.2);
+  color: #f7c948;
+}
+
+.warning-badge.orange {
+  background: rgba(237, 137, 54, 0.2);
+  color: #ed8936;
+}
+
+.warning-badge.red {
+  background: rgba(237, 100, 100, 0.2);
   color: #ef6461;
 }
 

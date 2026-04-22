@@ -1,6 +1,5 @@
 <template>
   <div class="app">
-    <canvas ref="canvasRef" class="background-canvas"></canvas>
     <Earth3D ref="earthRef" class="earth-layer" :projects="projects" @showProject="handleShowProject" />
 
     <Sidebar
@@ -15,6 +14,7 @@
 
     <Dashboard
       v-if="activeModule === 'dashboard'"
+      ref="dashboardRef"
       class="dashboard-layer"
       @selectProject="handleShowProject"
       @viewAll="selectModule('projects')"
@@ -23,34 +23,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import Earth3D from './components/Earth3D.vue'
 import Sidebar from './components/Sidebar.vue'
 import Dashboard from './components/Dashboard.vue'
-import ProjectList from './components/ProjectList.vue'
-import ContractList from './components/ContractList.vue'
-import InvoiceList from './components/InvoiceList.vue'
-import PaymentList from './components/PaymentList.vue'
-import AcceptanceList from './components/AcceptanceList.vue'
-import PeopleList from './components/PeopleList.vue'
 
-const canvasRef = ref(null)
 const earthRef = ref(null)
+const dashboardRef = ref(null)
 const activeModule = ref(null)
 const sidebarWidth = ref(200)
 const viewProjectData = ref(null)
 const projects = ref([])
-
-const modules = {
-  projects: ProjectList,
-  contracts: ContractList,
-  invoices: InvoiceList,
-  payments: PaymentList,
-  acceptances: AcceptanceList,
-  people: PeopleList
-}
-
-const currentModuleComponent = computed(() => modules[activeModule.value])
 
 const loadProjects = async () => {
   try {
@@ -75,48 +58,48 @@ const handleAction = async (payload) => {
     if (module === 'projects') {
       if (type === 'add') await api.createProject(data)
       else if (type === 'edit') await api.updateProject(data)
-      else if (type === 'delete') { if (confirm('确定要删除此项目吗？')) await api.deleteProject(data.id) }
-      await loadProjects()
+      else if (type === 'delete') await api.deleteProject(data.id)
     } else if (module === 'contracts') {
       if (type === 'add') await api.createContract(data)
       else if (type === 'edit') await api.updateContract(data)
-      else if (type === 'delete') { if (confirm('确定要删除此合同吗？')) await api.deleteContract(data.id) }
+      else if (type === 'delete') await api.deleteContract(data.id)
     } else if (module === 'invoices') {
       if (type === 'add') await api.createInvoice(data)
       else if (type === 'edit') await api.updateInvoice(data)
-      else if (type === 'delete') { if (confirm('确定要删除此发票吗？')) await api.deleteInvoice(data.id) }
+      else if (type === 'delete') await api.deleteInvoice(data.id)
     } else if (module === 'payments') {
       if (type === 'add') await api.createPayment(data)
       else if (type === 'edit') await api.updatePayment(data)
-      else if (type === 'delete') { if (confirm('确定要删除此付款吗？')) await api.deletePayment(data.id) }
+      else if (type === 'delete') await api.deletePayment(data.id)
     } else if (module === 'acceptances') {
       if (type === 'add') await api.createAcceptance(data)
       else if (type === 'edit') await api.updateAcceptance(data)
-      else if (type === 'delete') { if (confirm('确定要删除此验收吗？')) await api.deleteAcceptance(data.id) }
+      else if (type === 'delete') await api.deleteAcceptance(data.id)
     } else if (module === 'people') {
       if (type === 'add') await api.createPerson(data)
       else if (type === 'edit') await api.updatePerson(data)
-      else if (type === 'delete') { if (confirm('确定要删除此人员吗？')) await api.deletePerson(data.id) }
+      else if (type === 'delete') await api.deletePerson(data.id)
     } else if (module === 'budgets') {
       if (type === 'add') await api.createBudget(data)
       else if (type === 'edit') await api.updateBudget(data)
-      else if (type === 'delete') { if (confirm('确定要删除此预算吗？')) await api.deleteBudget(data.id) }
+      else if (type === 'delete') await api.deleteBudget(data.id)
     } else if (module === 'tasks') {
       if (type === 'add') await api.createTask(data)
       else if (type === 'edit') await api.updateTask(data)
-      else if (type === 'delete') { if (confirm('确定要删除此任务吗？')) await api.deleteTask(data.id) }
+      else if (type === 'delete') await api.deleteTask(data.id)
     } else if (module === 'management_fees') {
       if (type === 'add') await api.createManagementFee(data)
       else if (type === 'edit') await api.updateManagementFee(data)
-      else if (type === 'delete') { if (confirm('确定要删除此管理费用吗？')) await api.deleteManagementFee(data.id) }
+      else if (type === 'delete') await api.deleteManagementFee(data.id)
+    }
+    // 刷新项目数据（合同/发票/任务/预算/费用等变化都会影响项目统计）
+    await loadProjects()
+    if (dashboardRef.value) {
+      dashboardRef.value.refresh()
     }
   } catch (err) {
     console.error('Action failed:', err)
   }
-}
-
-const handleModuleAction = (module) => {
-  activeModule.value = module
 }
 
 const handleViewProject = (project) => {
@@ -152,15 +135,6 @@ body {
   height: 100vh;
   position: relative;
   background: #000;
-}
-
-.background-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
 }
 
 .earth-layer {
