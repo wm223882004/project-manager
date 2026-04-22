@@ -298,9 +298,11 @@ onMounted(() => {
 <style scoped>
 .dashboard {
   padding: 20px;
-  background: #f5f7fa;
+  background: rgba(5, 12, 24, 0.92);
+  backdrop-filter: blur(12px);
   min-height: 100vh;
   overflow-y: auto;
+  color: #e2e8f0;
 }
 
 /* 统计卡片 */
@@ -312,7 +314,8 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: white;
+  background: rgba(20, 30, 50, 0.85);
+  border: 1px solid rgba(100, 150, 255, 0.12);
   border-radius: 12px;
   padding: 20px;
   display: flex;
@@ -320,12 +323,13 @@ onMounted(() => {
   gap: 16px;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(100, 150, 255, 0.15);
+  border-color: rgba(100, 150, 255, 0.3);
 }
 
 .stat-icon {
@@ -361,13 +365,13 @@ onMounted(() => {
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #1a202c;
+  color: #fff;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 13px;
-  color: #718096;
+  color: rgba(255, 255, 255, 0.6);
   margin-top: 4px;
 }
 
@@ -380,10 +384,11 @@ onMounted(() => {
 }
 
 .finance-card {
-  background: white;
+  background: rgba(20, 30, 50, 0.85);
+  border: 1px solid rgba(100, 150, 255, 0.12);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .finance-header {
@@ -399,7 +404,7 @@ onMounted(() => {
 
 .finance-title {
   font-size: 14px;
-  color: #718096;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .finance-value {
@@ -429,13 +434,14 @@ onMounted(() => {
 }
 
 .task-stat {
-  background: white;
+  background: rgba(20, 30, 50, 0.85);
+  border: 1px solid rgba(100, 150, 255, 0.12);
   border-radius: 12px;
   padding: 20px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .task-stat-icon {
@@ -445,7 +451,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #edf2f7;
+  background: rgba(100, 150, 255, 0.1);
   border-radius: 10px;
 }
 
@@ -456,23 +462,24 @@ onMounted(() => {
 .task-stat-value {
   font-size: 24px;
   font-weight: 700;
-  color: #1a202c;
+  color: #fff;
   line-height: 1;
 }
 
 .task-stat-label {
   font-size: 12px;
-  color: #718096;
+  color: rgba(255, 255, 255, 0.6);
   margin-top: 4px;
 }
 
 /* 项目进度概览 */
 .projects-section {
-  background: white;
+  background: rgba(20, 30, 50, 0.85);
+  border: 1px solid rgba(100, 150, 255, 0.12);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .section-header {
@@ -485,7 +492,7 @@ onMounted(() => {
 .section-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #1a202c;
+  color: #fff;
   margin: 0;
 }
 
@@ -506,8 +513,8 @@ onMounted(() => {
 }
 
 .project-card {
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
+  background: rgba(30, 40, 60, 0.85);
+  border: 1px solid rgba(100, 150, 255, 0.12);
   border-radius: 10px;
   padding: 16px;
   cursor: pointer;
@@ -515,7 +522,7 @@ onMounted(() => {
 }
 
 .project-card:hover {
-  border-color: #4a90d9;
+  border-color: rgba(74, 144, 217, 0.5);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(74, 144, 217, 0.15);
 }
@@ -530,7 +537,7 @@ onMounted(() => {
 .project-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1a202c;
+  color: #fff;
   flex: 1;
   margin-right: 8px;
   overflow: hidden;
@@ -573,7 +580,7 @@ onMounted(() => {
   gap: 4px;
   margin-bottom: 12px;
   font-size: 12px;
-  color: #718096;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .card-progress {
@@ -584,13 +591,13 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #718096;
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 6px;
 }
 
 .progress-bar {
   height: 6px;
-  background: #e2e8f0;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -621,7 +628,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   padding-top: 10px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid rgba(100, 150, 255, 0.12);
 }
 
 .budget-item {
@@ -632,13 +639,13 @@ onMounted(() => {
 
 .budget-label {
   font-size: 10px;
-  color: #a0aec0;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .budget-value {
   font-size: 13px;
   font-weight: 600;
-  color: #1a202c;
+  color: #fff;
 }
 
 .budget-value.expense {
@@ -647,10 +654,11 @@ onMounted(() => {
 
 /* 即将到期 */
 .upcoming-section {
-  background: white;
+  background: rgba(20, 30, 50, 0.85);
+  border: 1px solid rgba(100, 150, 255, 0.12);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .upcoming-list {
@@ -664,15 +672,16 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  background: #fff5f5;
-  border: 1px solid #fed7d7;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .upcoming-item:hover {
-  background: #fed7d7;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .upcoming-info {
@@ -684,12 +693,12 @@ onMounted(() => {
 .upcoming-name {
   font-size: 14px;
   font-weight: 500;
-  color: #1a202c;
+  color: #fff;
 }
 
 .upcoming-dates {
   font-size: 12px;
-  color: #718096;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .days-left {

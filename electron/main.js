@@ -260,6 +260,9 @@ async function initDatabase() {
   try {
     db.run("ALTER TABLE invoices ADD COLUMN updated_at DATETIME")
   } catch (e) {}
+  try {
+    db.run("ALTER TABLE invoices ADD COLUMN invoice_type TEXT DEFAULT '收款'")
+  } catch (e) {}
 
   // 添加responsible_person和updated_at到payments表
   try {
@@ -429,69 +432,69 @@ function seedData() {
 
   // 发票数据 - 覆盖各种情况：有凭证/无凭证
   const invoices = [
-    // 项目1的发票 - 全部有凭证
-    { contract_id: 1, invoice_no: 'INV20240001', amount: 10000000, date: '2024-02-28' },
-    { contract_id: 1, invoice_no: 'INV20240002', amount: 8000000, date: '2024-04-15' },
-    { contract_id: 1, invoice_no: 'INV20240003', amount: 10000000, date: '2024-06-20' },
+    // 项目1的发票 - 全部有凭证（销售合同→收款发票）
+    { contract_id: 1, invoice_no: 'INV20240001', invoice_type: '收款', amount: 10000000, date: '2024-02-28' },
+    { contract_id: 1, invoice_no: 'INV20240002', invoice_type: '收款', amount: 8000000, date: '2024-04-15' },
+    { contract_id: 1, invoice_no: 'INV20240003', invoice_type: '收款', amount: 10000000, date: '2024-06-20' },
 
     // 项目2的发票 - 全部有凭证
-    { contract_id: 2, invoice_no: 'INV20240004', amount: 20000000, date: '2024-04-10' },
-    { contract_id: 2, invoice_no: 'INV20240005', amount: 15000000, date: '2024-05-15' },
-    { contract_id: 2, invoice_no: 'INV20240006', amount: 10000000, date: '2024-06-25' },
+    { contract_id: 2, invoice_no: 'INV20240004', invoice_type: '收款', amount: 20000000, date: '2024-04-10' },
+    { contract_id: 2, invoice_no: 'INV20240005', invoice_type: '收款', amount: 15000000, date: '2024-05-15' },
+    { contract_id: 2, invoice_no: 'INV20240006', invoice_type: '收款', amount: 10000000, date: '2024-06-25' },
 
     // 项目3的发票 - 部分有凭证
-    { contract_id: 3, invoice_no: 'INV20240007', amount: 12000000, date: '2024-07-01' },
-    { contract_id: 3, invoice_no: 'INV20240008', amount: 10000000, date: '2024-08-15' },
+    { contract_id: 3, invoice_no: 'INV20240007', invoice_type: '收款', amount: 12000000, date: '2024-07-01' },
+    { contract_id: 3, invoice_no: 'INV20240008', invoice_type: '收款', amount: 10000000, date: '2024-08-15' },
 
-    // 项目4的发票 - 全部无凭证
-    { contract_id: 4, invoice_no: 'INV20240009', amount: 35000000, date: '2024-03-15' },
+    // 项目4的发票 - 全部无凭证（采购合同→付款发票）
+    { contract_id: 4, invoice_no: 'INV20240009', invoice_type: '付款', amount: 35000000, date: '2024-03-15' },
 
     // 项目5的发票 - 全部有凭证
-    { contract_id: 5, invoice_no: 'INV20240010', amount: 12000000, date: '2024-07-10' },
-    { contract_id: 5, invoice_no: 'INV20240011', amount: 6000000, date: '2024-08-05' },
+    { contract_id: 5, invoice_no: 'INV20240010', invoice_type: '收款', amount: 12000000, date: '2024-07-10' },
+    { contract_id: 5, invoice_no: 'INV20240011', invoice_type: '付款', amount: 6000000, date: '2024-08-05' },
 
     // 项目6的发票 - 部分有凭证
-    { contract_id: 6, invoice_no: 'INV20240012', amount: 15000000, date: '2024-05-20' },
-    { contract_id: 6, invoice_no: 'INV20240013', amount: 13000000, date: '2024-07-30' },
+    { contract_id: 6, invoice_no: 'INV20240012', invoice_type: '收款', amount: 15000000, date: '2024-05-20' },
+    { contract_id: 6, invoice_no: 'INV20240013', invoice_type: '收款', amount: 13000000, date: '2024-07-30' },
 
     // 项目7的发票 - 全部有凭证
-    { contract_id: 7, invoice_no: 'INV20240014', amount: 10000000, date: '2024-04-25' },
-    { contract_id: 7, invoice_no: 'INV20240015', amount: 10000000, date: '2024-06-15' },
-    { contract_id: 7, invoice_no: 'INV20240016', amount: 7500000, date: '2024-08-20' },
+    { contract_id: 7, invoice_no: 'INV20240014', invoice_type: '收款', amount: 10000000, date: '2024-04-25' },
+    { contract_id: 7, invoice_no: 'INV20240015', invoice_type: '收款', amount: 10000000, date: '2024-06-15' },
+    { contract_id: 7, invoice_no: 'INV20240016', invoice_type: '付款', amount: 7500000, date: '2024-08-20' },
 
     // 项目9(已完成)的发票 - 全部有凭证
-    { contract_id: 9, invoice_no: 'INV20230001', amount: 15000000, date: '2023-08-15' },
-    { contract_id: 9, invoice_no: 'INV20230002', amount: 17000000, date: '2023-10-20' },
+    { contract_id: 9, invoice_no: 'INV20230001', invoice_type: '收款', amount: 15000000, date: '2023-08-15' },
+    { contract_id: 9, invoice_no: 'INV20230002', invoice_type: '收款', amount: 17000000, date: '2023-10-20' },
 
     // 项目10(已完成)的发票 - 全部有凭证
-    { contract_id: 10, invoice_no: 'INV20230003', amount: 28000000, date: '2023-05-20' },
-    { contract_id: 10, invoice_no: 'INV20230004', amount: 27000000, date: '2023-07-25' },
+    { contract_id: 10, invoice_no: 'INV20230003', invoice_type: '收款', amount: 28000000, date: '2023-05-20' },
+    { contract_id: 10, invoice_no: 'INV20230004', invoice_type: '付款', amount: 27000000, date: '2023-07-25' },
 
     // 项目11(已完成)的发票 - 全部有凭证
-    { contract_id: 11, invoice_no: 'INV20230005', amount: 8000000, date: '2023-03-15' },
-    { contract_id: 11, invoice_no: 'INV20230006', amount: 7000000, date: '2023-05-10' },
+    { contract_id: 11, invoice_no: 'INV20230005', invoice_type: '收款', amount: 8000000, date: '2023-03-15' },
+    { contract_id: 11, invoice_no: 'INV20230006', invoice_type: '付款', amount: 7000000, date: '2023-05-10' },
 
     // 项目12(已完成)的发票 - 部分无凭证
-    { contract_id: 12, invoice_no: 'INV20230007', amount: 20000000, date: '2023-06-15' },
-    { contract_id: 12, invoice_no: 'INV20230008', amount: 20000000, date: '2023-09-20' },
+    { contract_id: 12, invoice_no: 'INV20230007', invoice_type: '收款', amount: 20000000, date: '2023-06-15' },
+    { contract_id: 12, invoice_no: 'INV20230008', invoice_type: '收款', amount: 20000000, date: '2023-09-20' },
 
     // 项目13(已完成)的发票 - 全部有凭证
-    { contract_id: 13, invoice_no: 'INV20230009', amount: 25000000, date: '2023-05-20' },
+    { contract_id: 13, invoice_no: 'INV20230009', invoice_type: '收款', amount: 25000000, date: '2023-05-20' },
 
     // 项目14(已暂停)的发票 - 全部无凭证
-    { contract_id: 14, invoice_no: 'INV20240101', amount: 15000000, date: '2024-09-10' },
-    { contract_id: 14, invoice_no: 'INV20240102', amount: 15000000, date: '2024-10-15' },
+    { contract_id: 14, invoice_no: 'INV20240101', invoice_type: '收款', amount: 15000000, date: '2024-09-10' },
+    { contract_id: 14, invoice_no: 'INV20240102', invoice_type: '付款', amount: 15000000, date: '2024-10-15' },
 
     // 项目15(已暂停)的发票 - 部分有凭证
-    { contract_id: 15, invoice_no: 'INV20240103', amount: 22000000, date: '2024-06-20' },
+    { contract_id: 15, invoice_no: 'INV20240103', invoice_type: '付款', amount: 22000000, date: '2024-06-20' },
 
     // 项目17(已延期)的发票 - 部分无凭证
-    { contract_id: 17, invoice_no: 'INV20240104', amount: 19000000, date: '2024-02-15' },
+    { contract_id: 17, invoice_no: 'INV20240104', invoice_type: '收款', amount: 19000000, date: '2024-02-15' },
   ]
 
   invoices.forEach(i => {
-    db.run("INSERT INTO invoices (contract_id, invoice_no, amount, date) VALUES (?, ?, ?, ?)",
-      [i.contract_id, i.invoice_no, i.amount, i.date])
+    db.run("INSERT INTO invoices (contract_id, invoice_no, invoice_type, amount, date) VALUES (?, ?, ?, ?, ?)",
+      [i.contract_id, i.invoice_no, i.invoice_type || '收款', i.amount, i.date])
   })
 
   // 付款凭证数据 - 部分发票有凭证，部分无
@@ -1057,18 +1060,21 @@ function createWindow() {
 
   const isDev = !fs.existsSync(path.join(__dirname, '../dist/index.html'))
   if (isDev) {
-    const http = require('http')
-    const checkPort = (port, callback) => {
-      const req = http.get(`http://localhost:${port}`, (res) => {
-        callback(port)
+    // 开发模式下清除缓存，确保加载最新代码
+    mainWindow.webContents.session.clearCache().then(() => {
+      const http = require('http')
+      const checkPort = (port, callback) => {
+        const req = http.get(`http://localhost:${port}`, (res) => {
+          callback(port)
+        })
+        req.on('error', () => {
+          if (port < 5300) checkPort(port + 1, callback)
+        })
+        req.setTimeout(200, () => { req.destroy(); if (port < 5300) checkPort(port + 1, callback) })
+      }
+      checkPort(5173, (availablePort) => {
+        mainWindow.loadURL(`http://localhost:${availablePort}`)
       })
-      req.on('error', () => {
-        if (port < 5300) checkPort(port + 1, callback)
-      })
-      req.setTimeout(200, () => { req.destroy(); if (port < 5300) checkPort(port + 1, callback) })
-    }
-    checkPort(5173, (availablePort) => {
-      mainWindow.loadURL(`http://localhost:${availablePort}`)
     })
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
@@ -1263,13 +1269,13 @@ ipcMain.handle('db:invoices:getAll', () => {
 })
 
 ipcMain.handle('db:invoices:create', (_, data) => {
-  return runQuery('INSERT INTO invoices (contract_id, invoice_no, amount, date) VALUES (?, ?, ?, ?)',
-    [data.contract_id, data.invoice_no, data.amount, data.date])
+  return runQuery('INSERT INTO invoices (contract_id, invoice_no, invoice_type, amount, date) VALUES (?, ?, ?, ?, ?)',
+    [data.contract_id, data.invoice_no, data.invoice_type || '收款', data.amount, data.date])
 })
 
 ipcMain.handle('db:invoices:update', (_, data) => {
-  runQuery('UPDATE invoices SET contract_id = ?, invoice_no = ?, amount = ?, date = ? WHERE id = ?',
-    [data.contract_id, data.invoice_no, data.amount, data.date, data.id])
+  runQuery('UPDATE invoices SET contract_id = ?, invoice_no = ?, invoice_type = ?, amount = ?, date = ? WHERE id = ?',
+    [data.contract_id, data.invoice_no, data.invoice_type || '收款', data.amount, data.date, data.id])
   return data
 })
 

@@ -28,7 +28,7 @@
     <div
       class="detail-panel"
       :style="{ width: detailWidth + 'px' }"
-      v-if="showDetailView && selectedItem"
+      v-if="activeModule === 'projects' && showDetailView && selectedItem"
     >
       <div class="panel-header">
         <button class="back-btn" @click="closeDetailView">←</button>
@@ -294,6 +294,31 @@
             <span class="info-value">{{ selectedContract.project_name }}</span>
           </div>
         </div>
+        <!-- 关联发票列表 -->
+        <div class="detail-section" style="margin-top: 12px;">
+          <div class="section-header">
+            <span class="section-title">关联发票</span>
+            <button class="section-btn" @click="handleContractInvoiceAction('add')">＋ 新增</button>
+          </div>
+          <div class="contract-list">
+            <div v-if="contractInvoices.length === 0" class="no-data">暂无关联发票</div>
+            <div
+              v-for="inv in contractInvoices"
+              :key="inv.id"
+              class="contract-item"
+              @click="selectedInvoice = inv"
+            >
+              <div class="contract-info">
+                <span class="contract-name">{{ inv.invoice_no }}</span>
+                <span class="contract-type">{{ inv.invoice_type || '收款' }}</span>
+              </div>
+              <div class="contract-amount-wrapper">
+                <span class="contract-amount">¥{{ formatAmount(inv.amount) }}</span>
+                <span :class="['item-status', inv.payment_status || '未收款']" style="font-size: 10px;">{{ inv.payment_status || '未收款' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="detail-actions">
         <button class="action-btn edit-btn" @click="handleContractAction('edit')">✎ 修改</button>
@@ -319,6 +344,10 @@
           <div class="info-row">
             <span class="info-label">发票号码</span>
             <span class="info-value">{{ selectedInvoice.invoice_no }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">发票类型</span>
+            <span class="info-value">{{ selectedInvoice.invoice_type || '收款' }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">发票金额</span>
@@ -474,6 +503,45 @@
       <div class="resize-handle-detail" @mousedown="startDetailPanelResize"></div>
     </div>
 
+    <!-- 人员详情面板 -->
+    <div
+      class="contract-detail-panel"
+      :style="{ width: detailPanelWidth + 'px' }"
+      v-if="selectedPerson"
+    >
+      <div class="panel-header">
+        <button class="back-btn" @click="selectedPerson = null">←</button>
+        <h3>{{ selectedPerson.name }}</h3>
+        <button class="close-btn" @click="selectedPerson = null">×</button>
+      </div>
+      <div class="detail-content">
+        <div class="detail-section">
+          <div class="section-title">人员信息</div>
+          <div class="info-row">
+            <span class="info-label">姓名</span>
+            <span class="info-value">{{ selectedPerson.name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">职位</span>
+            <span class="info-value">{{ selectedPerson.position || '-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">电话</span>
+            <span class="info-value">{{ selectedPerson.phone || '-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">邮箱</span>
+            <span class="info-value">{{ selectedPerson.email || '-' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="detail-actions">
+        <button class="action-btn edit-btn" @click="handlePersonAction('edit')">✎ 修改</button>
+        <button class="action-btn delete-btn" @click="handlePersonAction('delete')">✕ 删除</button>
+      </div>
+      <div class="resize-handle-detail" @mousedown="startDetailPanelResize"></div>
+    </div>
+
     <div
       class="sidebar-panel"
       :style="{ width: sidebarWidth + 'px' }"
@@ -496,7 +564,7 @@
               v-for="item in filteredItems"
               :key="item.id"
               :class="['project-card', { selected: selectedItem && selectedItem.id === item.id }]"
-              @click="selectItem(item)"
+              @click="selectItem(item, 'projects')"
             >
               <div class="card-top">
                 <span class="project-name">{{ item.name }}</span>
@@ -531,8 +599,8 @@
             <div
               v-for="item in filteredItems"
               :key="item.id"
-              :class="['item-row', { selected: selectedItem && selectedItem.id === item.id }]"
-              @click="selectItem(item)"
+              :class="['item-row', { selected: getSelectedItemForModule(item) }]"
+              @click="selectItem(item, activeModule)"
             >
               <div class="item-info">
                 <span class="item-title">{{ item.name || item.invoice_no || item.receipt_no || item.title }}</span>
@@ -562,7 +630,7 @@
       </div>
       <form class="form-content" @submit.prevent="saveForm">
         <!-- 项目表单 -->
-        <template v-if="activeModule === 'projects'">
+        <template v-if="formModule === 'projects'">
           <div class="form-group">
             <label>项目编号</label>
             <input v-model="formData.code" required placeholder="请输入项目编号" />
@@ -601,7 +669,7 @@
         </template>
 
         <!-- 合同表单 -->
-        <template v-else-if="activeModule === 'contracts'">
+        <template v-else-if="formModule === 'contracts'">
           <div class="form-group">
             <label>关联项目</label>
             <select v-model="formData.project_id" required>
@@ -631,7 +699,7 @@
         </template>
 
         <!-- 发票表单 -->
-        <template v-else-if="activeModule === 'invoices'">
+        <template v-else-if="formModule === 'invoices'">
           <div class="form-group">
             <label>关联合同</label>
             <select v-model="formData.contract_id" required>
@@ -700,7 +768,7 @@
         </template>
 
         <!-- 付款凭证表单 -->
-        <template v-else-if="activeModule === 'payments'">
+        <template v-else-if="formModule === 'payments'">
           <div class="form-group">
             <label>关联发票</label>
             <select v-model="formData.invoice_id" required>
@@ -723,7 +791,7 @@
         </template>
 
         <!-- 验收确认表单 -->
-        <template v-else-if="activeModule === 'acceptances'">
+        <template v-else-if="formModule === 'acceptances'">
           <div class="form-group">
             <label>关联项目</label>
             <select v-model="formData.project_id" required>
@@ -750,7 +818,7 @@
         </template>
 
         <!-- 管理费用表单 -->
-        <template v-else-if="activeModule === 'management_fees'">
+        <template v-else-if="formModule === 'management_fees'">
           <div class="form-group">
             <label>关联项目</label>
             <select v-model="formData.project_id" required>
@@ -788,7 +856,7 @@
         </template>
 
         <!-- 人员表单 -->
-        <template v-else-if="activeModule === 'people'">
+        <template v-else-if="formModule === 'people'">
           <div class="form-group">
             <label>姓名</label>
             <input v-model="formData.name" required placeholder="请输入姓名" />
@@ -821,7 +889,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import CityPicker from './CityPicker.vue'
 
 const props = defineProps({
@@ -846,6 +914,7 @@ const panelCollapsed = ref(false)
 const showListPanel = ref(false)
 const showForm = ref(false)
 const formAction = ref('')
+const formModule = ref(null)
 const showDeleteConfirm = ref(false)
 const formWidth = ref(340)
 const searchKeyword = ref('')
@@ -865,11 +934,13 @@ const selectedInvoice = ref(null)
 const selectedPayment = ref(null)
 const selectedAcceptance = ref(null)
 const selectedManagementFee = ref(null)
+const selectedPerson = ref(null)
 const projectContracts = ref([])
 const projectInvoices = ref([])
 const projectBudgets = ref([])
 const projectTasks = ref([])
 const projectManagementFees = ref([])
+const contractInvoices = ref([])
 const activeSubTab = ref('contracts')
 
 const salesContracts = computed(() => {
@@ -930,6 +1001,7 @@ const getBudgetRemainingPercent = (ratio) => {
 // 根据模块获取数据
 const currentData = computed(() => {
   switch (props.activeModule) {
+    case 'dashboard': return []
     case 'projects': return projects.value
     case 'contracts': return contracts.value
     case 'invoices': return invoices.value
@@ -1012,6 +1084,7 @@ const getItemSub = (item) => {
 }
 
 const menuItems = [
+  { key: 'dashboard', label: '项目概览', icon: '📊' },
   { key: 'projects', label: '项目管理', icon: '📁' },
   { key: 'contracts', label: '合同管理', icon: '📄' },
   { key: 'invoices', label: '发票管理', icon: '🧾' },
@@ -1101,38 +1174,58 @@ const loadProjectManagementFees = async (projectId) => {
   }
 }
 
-const selectItem = (item) => {
-  console.log('selectItem called with:', item)
-  console.log('activeModule:', props.activeModule)
-  selectedItem.value = item
-  console.log('selectedItem set to:', selectedItem.value)
-  if (props.activeModule === 'projects') {
-    console.log('Setting showDetailView to true')
+const getSelectedItemForModule = (item) => {
+  const module = props.activeModule
+  if (module === 'projects') return selectedItem.value && selectedItem.value.id === item.id
+  if (module === 'contracts') return selectedContract.value && selectedContract.value.id === item.id
+  if (module === 'invoices') return selectedInvoice.value && selectedInvoice.value.id === item.id
+  if (module === 'payments') return selectedPayment.value && selectedPayment.value.id === item.id
+  if (module === 'acceptances') return selectedAcceptance.value && selectedAcceptance.value.id === item.id
+  if (module === 'management_fees') return selectedManagementFee.value && selectedManagementFee.value.id === item.id
+  if (module === 'people') return selectedPerson.value && selectedPerson.value.id === item.id
+  return selectedItem.value && selectedItem.value.id === item.id
+}
+
+const selectItem = (item, module) => {
+  console.log('[selectItem] module:', module, 'item:', item?.name || item?.id)
+  // 先重置所有详情状态，避免模块间状态污染
+  selectedItem.value = null
+  showDetailView.value = false
+  selectedContract.value = null
+  selectedInvoice.value = null
+  selectedPayment.value = null
+  selectedAcceptance.value = null
+  selectedManagementFee.value = null
+  selectedPerson.value = null
+
+  if (module === 'projects') {
+    selectedItem.value = item
     showDetailView.value = true
     activeSubTab.value = 'contracts'
-    // Load project related data
     loadProjectContracts(item.id)
     loadProjectInvoices(item.id)
     loadProjectBudgets(item.id)
     loadProjectTasks(item.id)
     loadProjectManagementFees(item.id)
-  } else if (props.activeModule === 'contracts') {
+  } else if (module === 'contracts') {
     selectedContract.value = item
-  } else if (props.activeModule === 'invoices') {
+  } else if (module === 'invoices') {
     selectedInvoice.value = item
-  } else if (props.activeModule === 'payments') {
+  } else if (module === 'payments') {
     selectedPayment.value = item
-  } else if (props.activeModule === 'acceptances') {
+  } else if (module === 'acceptances') {
     selectedAcceptance.value = item
-  } else if (props.activeModule === 'management_fees') {
+  } else if (module === 'management_fees') {
     selectedManagementFee.value = item
+  } else if (module === 'people') {
+    console.log('[selectItem] Setting selectedPerson to:', item?.name)
+    selectedPerson.value = item
   } else {
-    // For other modules, also show detail view if item supports it
+    selectedItem.value = item
     if (item.name) {
       showDetailView.value = true
     }
   }
-  console.log('showDetailView is now:', showDetailView.value)
 }
 
 const loadProjectContracts = async (projectId) => {
@@ -1172,6 +1265,16 @@ const loadProjectTasks = async (projectId) => {
 
 const selectContract = (contract) => {
   selectedContract.value = contract
+  loadContractInvoices(contract.id)
+}
+
+const loadContractInvoices = async (contractId) => {
+  try {
+    const allInvoices = await window.electronAPI.getInvoices()
+    contractInvoices.value = allInvoices.filter(i => i.contract_id === contractId)
+  } catch (err) {
+    console.error('Failed to load contract invoices:', err)
+  }
 }
 
 const closeContractDetail = () => {
@@ -1181,13 +1284,25 @@ const closeContractDetail = () => {
 const handleContractAction = (action) => {
   if (action === 'edit') {
     formAction.value = 'edit'
+    formModule.value = 'contracts'
     showDeleteConfirm.value = false
     formData.value = { ...selectedContract.value }
     selectedItem.value = projects.value.find(p => p.id === selectedContract.value.project_id)
     showForm.value = true
   } else if (action === 'delete') {
     formAction.value = 'delete'
+    formModule.value = 'contracts'
     showDeleteConfirm.value = true
+    showForm.value = true
+  }
+}
+
+const handleContractInvoiceAction = (action) => {
+  if (action === 'add') {
+    formAction.value = 'add'
+    formModule.value = 'invoices'
+    showDeleteConfirm.value = false
+    formData.value = { contract_id: selectedContract.value.id, invoice_type: '收款', invoice_no: '', amount: '', date: '' }
     showForm.value = true
   }
 }
@@ -1195,11 +1310,13 @@ const handleContractAction = (action) => {
 const handleInvoiceAction = (action) => {
   if (action === 'edit') {
     formAction.value = 'edit'
+    formModule.value = 'invoices'
     showDeleteConfirm.value = false
     formData.value = { ...selectedInvoice.value }
     showForm.value = true
   } else if (action === 'delete') {
     formAction.value = 'delete'
+    formModule.value = 'invoices'
     showDeleteConfirm.value = true
     showForm.value = true
   }
@@ -1208,11 +1325,13 @@ const handleInvoiceAction = (action) => {
 const handlePaymentAction = (action) => {
   if (action === 'edit') {
     formAction.value = 'edit'
+    formModule.value = 'payments'
     showDeleteConfirm.value = false
     formData.value = { ...selectedPayment.value }
     showForm.value = true
   } else if (action === 'delete') {
     formAction.value = 'delete'
+    formModule.value = 'payments'
     showDeleteConfirm.value = true
     showForm.value = true
   }
@@ -1221,12 +1340,14 @@ const handlePaymentAction = (action) => {
 const handleAcceptanceAction = (action) => {
   if (action === 'edit') {
     formAction.value = 'edit'
+    formModule.value = 'acceptances'
     showDeleteConfirm.value = false
     formData.value = { ...selectedAcceptance.value }
     selectedItem.value = projects.value.find(p => p.id === selectedAcceptance.value.project_id)
     showForm.value = true
   } else if (action === 'delete') {
     formAction.value = 'delete'
+    formModule.value = 'acceptances'
     showDeleteConfirm.value = true
     showForm.value = true
   }
@@ -1235,12 +1356,29 @@ const handleAcceptanceAction = (action) => {
 const handleManagementFeeAction = (action) => {
   if (action === 'edit') {
     formAction.value = 'edit'
+    formModule.value = 'management_fees'
     showDeleteConfirm.value = false
     formData.value = { ...selectedManagementFee.value }
     selectedItem.value = projects.value.find(p => p.id === selectedManagementFee.value.project_id)
     showForm.value = true
   } else if (action === 'delete') {
     formAction.value = 'delete'
+    formModule.value = 'management_fees'
+    showDeleteConfirm.value = true
+    showForm.value = true
+  }
+}
+
+const handlePersonAction = (action) => {
+  if (action === 'edit') {
+    formAction.value = 'edit'
+    formModule.value = 'people'
+    showDeleteConfirm.value = false
+    formData.value = { ...selectedPerson.value }
+    showForm.value = true
+  } else if (action === 'delete') {
+    formAction.value = 'delete'
+    formModule.value = 'people'
     showDeleteConfirm.value = true
     showForm.value = true
   }
@@ -1248,36 +1386,49 @@ const handleManagementFeeAction = (action) => {
 
 const closeDetailView = () => {
   showDetailView.value = false
+  selectedItem.value = null
   selectedContract.value = null
   selectedInvoice.value = null
   selectedPayment.value = null
   selectedAcceptance.value = null
   selectedManagementFee.value = null
+  selectedPerson.value = null
 }
 
 const handleDetailAction = (action) => {
   if (action === 'addContract') {
     formAction.value = 'add'
+    formModule.value = 'contracts'
     showDeleteConfirm.value = false
     formData.value = { project_id: selectedItem.value.id, contract_type: '销售合同', name: '', amount: '', signed_date: '' }
     showForm.value = true
+  } else if (action === 'addInvoice') {
+    formAction.value = 'add'
+    formModule.value = 'invoices'
+    showDeleteConfirm.value = false
+    formData.value = { contract_id: '', invoice_type: '收款', invoice_no: '', amount: '', date: '' }
+    showForm.value = true
   } else if (action === 'addBudget') {
     formAction.value = 'add'
+    formModule.value = 'budgets'
     showDeleteConfirm.value = false
     formData.value = { project_id: selectedItem.value.id, category: '', amount: '', description: '' }
     showForm.value = true
   } else if (action === 'addTask') {
     formAction.value = 'add'
+    formModule.value = 'tasks'
     showDeleteConfirm.value = false
     formData.value = { project_id: selectedItem.value.id, name: '', status: '进行中', responsible_person: '', due_date: '' }
     showForm.value = true
   } else if (action === 'addManagementFee') {
     formAction.value = 'add'
+    formModule.value = 'management_fees'
     showDeleteConfirm.value = false
     formData.value = { project_id: selectedItem.value.id, category: '', amount: '', responsible_person: '', fee_date: '', description: '' }
     showForm.value = true
   } else if (action === 'editProject') {
     formAction.value = 'edit'
+    formModule.value = 'projects'
     showDeleteConfirm.value = false
     formData.value = { ...selectedItem.value }
     if (formData.value.locationObj === undefined) {
@@ -1286,6 +1437,7 @@ const handleDetailAction = (action) => {
     showForm.value = true
   } else if (action === 'deleteProject') {
     formAction.value = 'delete'
+    formModule.value = props.activeModule
     showDeleteConfirm.value = true
     showForm.value = true
   }
@@ -1325,6 +1477,20 @@ const getProgressClass = (progress) => {
 }
 
 const handleTabClick = (key) => {
+  if (key === 'dashboard') {
+    emit('select', 'dashboard')
+    showListPanel.value = false
+    panelCollapsed.value = false
+    showDetailView.value = false
+    selectedItem.value = null
+    selectedContract.value = null
+    selectedInvoice.value = null
+    selectedPayment.value = null
+    selectedAcceptance.value = null
+    selectedManagementFee.value = null
+    selectedPerson.value = null
+    return
+  }
   if (panelCollapsed.value) {
     panelCollapsed.value = false
     showListPanel.value = true
@@ -1388,6 +1554,7 @@ const getDefaultFormData = () => {
 
 const handleAction = (action) => {
   formAction.value = action
+  formModule.value = props.activeModule
   showDeleteConfirm.value = false
   if (action === 'add') {
     formData.value = getDefaultFormData()
@@ -1404,6 +1571,7 @@ const handleAction = (action) => {
 const closeForm = () => {
   showForm.value = false
   showDeleteConfirm.value = false
+  formModule.value = null
 }
 
 const formData = ref(getDefaultFormData())
@@ -1411,60 +1579,54 @@ const formData = ref(getDefaultFormData())
 const saveForm = async () => {
   const saveData = { ...formData.value }
 
-  // 判断是预算、任务还是管理费用表单
-  const isBudgetForm = formData.value.category !== undefined && formData.value.amount !== undefined && formData.value.description !== undefined && formData.value.name === undefined && formData.value.responsible_person === undefined
-  const isTaskForm = formData.value.status !== undefined && formData.value.name !== undefined && formData.value.category === undefined
-  const isManagementFeeForm = formData.value.responsible_person !== undefined && formData.value.fee_date !== undefined && formData.value.category !== undefined
-
   // 项目处理地点 - 使用cityObj
-  if (props.activeModule === 'projects' && formData.value.cityObj) {
+  if (formModule.value === 'projects' && formData.value.cityObj) {
     saveData.city_id = formData.value.cityObj.id
     saveData.location = formData.value.cityObj.display_name
     delete saveData.cityObj
   }
 
-  // 删除不需要的字段
+  // 删除不需要的字段（join字段和计算字段）
   delete saveData.project_name
   delete saveData.contract_name
-  delete saveData.invoice_no
+  delete saveData.task_name
+  delete saveData.paid_amount
+  delete saveData.payment_status
+  delete saveData.city_name
+  delete saveData.lat
+  delete saveData.lon
+  delete saveData.total_tasks
+  delete saveData.completed_tasks
+  delete saveData.task_progress
+  delete saveData.total_budget
 
-  // 处理预算
-  if (isBudgetForm) {
-    emit('action', { type: formAction.value, module: 'budgets', data: saveData })
-    closeForm()
-    if (selectedItem.value) {
-      loadProjectBudgets(selectedItem.value.id)
-    }
-    return
-  }
+  // 使用 formModule 确定保存模块
+  const module = formModule.value
 
-  // 处理任务
-  if (isTaskForm) {
-    emit('action', { type: formAction.value, module: 'tasks', data: saveData })
-    closeForm()
-    if (selectedItem.value) {
-      loadProjectTasks(selectedItem.value.id)
-    }
-    return
-  }
-
-  // 处理管理费用
-  if (isManagementFeeForm) {
-    emit('action', { type: formAction.value, module: 'management_fees', data: saveData })
-    closeForm()
-    if (selectedItem.value) {
-      loadProjectManagementFees(selectedItem.value.id)
-    }
-    return
-  }
-
-  if (formAction.value === 'delete') {
-    emit('action', { type: 'delete', module: props.activeModule, data: saveData })
-  } else {
-    emit('action', { type: formAction.value, module: props.activeModule, data: saveData })
-  }
+  emit('action', { type: formAction.value, module, data: saveData })
 
   closeForm()
+
+  // 刷新关联数据
+  if (module === 'budgets' && selectedItem.value) {
+    loadProjectBudgets(selectedItem.value.id)
+  } else if (module === 'tasks' && selectedItem.value) {
+    loadProjectTasks(selectedItem.value.id)
+  } else if (module === 'management_fees' && selectedItem.value) {
+    loadProjectManagementFees(selectedItem.value.id)
+  } else if (module === 'invoices') {
+    if (selectedContract.value) {
+      loadContractInvoices(selectedContract.value.id)
+    }
+    if (selectedItem.value) {
+      loadProjectInvoices(selectedItem.value.id)
+    }
+  } else if (module === 'contracts') {
+    if (selectedItem.value) {
+      loadProjectContracts(selectedItem.value.id)
+    }
+  }
+
   loadModuleData(props.activeModule)
 }
 
@@ -1539,8 +1701,10 @@ watch(() => props.activeModule, () => {
   selectedInvoice.value = null
   selectedPayment.value = null
   selectedAcceptance.value = null
+  selectedPerson.value = null
   searchKeyword.value = ''
   formData.value = getDefaultFormData()
+  updateSidebarOffset()
 })
 
 watch(panelCollapsed, (val) => {
@@ -1551,20 +1715,14 @@ watch(panelCollapsed, (val) => {
     selectedInvoice.value = null
     selectedPayment.value = null
     selectedAcceptance.value = null
+    selectedPerson.value = null
   }
   updateSidebarOffset()
 })
 
-watch(() => props.activeModule, () => {
-  selectedInvoice.value = null
-  selectedPayment.value = null
-  selectedAcceptance.value = null
-  updateSidebarOffset()
-})
-
 watch(() => props.viewProject, (project) => {
-  if (project) {
-    selectItem(project)
+  if (project && props.activeModule === 'projects') {
+    selectItem(project, 'projects')
   }
 }, { immediate: true })
 
@@ -1602,7 +1760,6 @@ onMounted(() => {
   z-index: 100;
   width: 52px;
   flex-shrink: 0;
-  transition: width 0.25s ease;
   position: relative;
   left: 0;
   top: 0;

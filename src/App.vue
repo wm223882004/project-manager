@@ -12,6 +12,13 @@
       @action="handleAction"
       @view="handleViewProject"
     />
+
+    <Dashboard
+      v-if="activeModule === 'dashboard'"
+      class="dashboard-layer"
+      @selectProject="handleShowProject"
+      @viewAll="selectModule('projects')"
+    />
   </div>
 </template>
 
@@ -19,6 +26,7 @@
 import { ref, computed, onMounted } from 'vue'
 import Earth3D from './components/Earth3D.vue'
 import Sidebar from './components/Sidebar.vue'
+import Dashboard from './components/Dashboard.vue'
 import ProjectList from './components/ProjectList.vue'
 import ContractList from './components/ContractList.vue'
 import InvoiceList from './components/InvoiceList.vue'
@@ -162,6 +170,16 @@ body {
   width: 100%;
   height: 100%;
   z-index: 1;
+}
+
+.dashboard-layer {
+  position: absolute;
+  top: 0;
+  left: 52px;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  overflow-y: auto;
 }
 
 /* 全局滚动条样式 */
